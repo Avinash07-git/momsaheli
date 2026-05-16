@@ -9,5 +9,28 @@
   "state": "CA",
   "city": "Fresno",
   "hard_constraints": ["no_nights", "no_daily_delivery", "no_commercial_kitchen"],
-  "notes": "Has weekends for prep. Two kids under 10. Owns standard home kitchen."
+  "notes": "Has weekends for prep. Two kids under 10. Owns standard home kitchen.",
+  "assets": [
+    "home kitchen",
+    "family recipes",
+    "local mom network"
+  ],
+  "preferred_channels": [
+    "whatsapp_group",
+    "friends_text",
+    "vendor_form"
+  ],
+  "approved_channels": [
+    {
+      "id": "jenny_fresno_moms_whatsapp",
+      "type": "whatsapp_group",
+      "name": "Fresno Moms WhatsApp group",
+      "audience": "Local moms with school-age kids",
+      "rules_summary": "Jenny says one friendly intro post is allowed; no repeated promotional spam.",
+      "user_approved": true,
+      "allowed_actions": ["draft", "post"]
+    }
+  ],
+  "marketing_permission_level": "post_after_review",
+  "service_radius_miles": 8
 }

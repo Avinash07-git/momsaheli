@@ -184,6 +184,56 @@ async def scrape_food_local_comps(profile) -> dict:
         return _load_cache(cache_path)
 
 
+async def search_customer_leads(profile, opportunity, limit: int = 6) -> list[dict]:
+    """Find public first-customer paths for the winning opportunity.
+
+    Priority order:
+      1. Bright Data Web Unlocker / SERP when token+zone are configured and fixtures are off.
+      2. Tavily live search when configured.
+      3. Persona/category fixture fallback.
+
+    Safety boundaries: public pages only, no private group scraping, no member scraping,
+    no phone-number collection, and no login bypass.
+    """
+    queries = _customer_lead_queries(profile, opportunity)
+
+    if settings.BRIGHT_DATA_API_TOKEN and settings.BRIGHT_DATA_ZONE and not settings.USE_FIXTURES:
+        try:
+            leads: list[dict] = []
+            for query in queries:
+                html = await _bd_fetch(_build_search_url("google", query))
+                if not html:
+                    continue
+                extracted = await _extract_customer_leads_from_html(
+                    html=html,
+                    query=query,
+                    profile=profile,
+                    opportunity=opportunity,
+                    limit=max(1, limit - len(leads)),
+                )
+                leads.extend(extracted)
+                if len(leads) >= limit:
+                    break
+            leads = _dedupe_customer_lead_dicts(leads)
+            if leads:
+                log.info("bright_data.customer_leads.live", extra={"count": len(leads)})
+                return leads[:limit]
+        except Exception as e:
+            log.warning("bright_data.customer_leads.fallback_to_tavily", extra={"err": str(e)[:200]})
+
+    if tavily.is_configured():
+        try:
+            leads = await _search_customer_leads_tavily(profile, opportunity, queries, limit=limit)
+            if leads:
+                log.info("bright_data.customer_leads.tavily", extra={"count": len(leads)})
+                return leads[:limit]
+        except Exception as e:
+            log.warning("bright_data.customer_leads.tavily_fallback", extra={"err": str(e)[:200]})
+
+    log.info("bright_data.customer_leads.fixture", extra={"persona": getattr(profile, "persona_id", "unknown")})
+    return _load_customer_lead_fixture(profile, opportunity, limit=limit)
+
+
 def _build_search_url(source: str, query: str) -> str:
     q = quote_plus(query)
     if source == "castiron":
@@ -300,6 +350,299 @@ async def _extract_listings_from_html(html: str, query: str, source: str) -> lis
     except Exception as e:
         log.warning("bright_data.extract.fail", extra={"err": str(e)[:200]})
         return []
+
+
+async def _extract_customer_leads_from_html(
+    html: str,
+    query: str,
+    profile,
+    opportunity,
+    limit: int,
+) -> list[dict]:
+    snippet = _strip_html(html)
+    if len(snippet) < 200:
+        return []
+
+    system = (
+        "You extract public customer-acquisition paths from Google SERP or public web HTML for Mom's Saheli. "
+        "Only include public pages a working mom can review safely: vendor applications, school enrichment/vendor "
+        "pages, community business-post rules pages, event/vendor pages, directories, marketplace listing paths, "
+        "or public group landing/rules pages. "
+        "Never include private group members, WhatsApp invite scraping, phone numbers, login-only pages, or anything "
+        "that requires bypassing access controls. "
+        "Output ONLY JSON in this exact shape: "
+        '{"leads": [{'
+        '"id": str, '
+        '"title": str, '
+        '"source_type": "vendor_form"|"community_page"|"school_page"|"marketplace"|"approved_group"|'
+        '"warm_network"|"local_directory"|"event_page"|"manual", '
+        '"source_url": str|null, '
+        '"audience_match": str, '
+        '"why_relevant": str, '
+        '"estimated_reach": str|null, '
+        '"confidence": float 0..1, '
+        '"live_source": true, '
+        '"provider": "bright_data", '
+        '"notes": str|null'
+        "}]}. "
+        f"Return at most {limit} leads."
+    )
+    user = json.dumps({
+        "query": query,
+        "profile": {
+            "persona_id": getattr(profile, "persona_id", ""),
+            "display_name": getattr(profile, "display_name", ""),
+            "city": getattr(profile, "city", None),
+            "state": getattr(profile, "state", ""),
+            "preferred_channels": getattr(profile, "preferred_channels", []),
+        },
+        "opportunity": {
+            "id": getattr(opportunity, "id", ""),
+            "title": getattr(opportunity, "title", ""),
+            "category": getattr(opportunity, "category", ""),
+        },
+        "html_excerpt": snippet,
+    })
+    try:
+        result = await llm_cascade.chat_json(
+            messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
+            temperature=0.1,
+        )
+        cleaned: list[dict] = []
+        for i, raw in enumerate((result.get("leads") or [])[:limit]):
+            if not isinstance(raw, dict):
+                continue
+            lead = _normalize_customer_lead_dict(
+                raw,
+                fallback_id=f"bd_customer_{i + 1}",
+                provider="bright_data",
+                live_source=True,
+                profile=profile,
+                opportunity=opportunity,
+            )
+            if lead:
+                cleaned.append(lead)
+        return cleaned
+    except Exception as e:
+        log.warning("bright_data.customer_extract.fail", extra={"err": str(e)[:200]})
+        return []
+
+
+async def _search_customer_leads_tavily(profile, opportunity, queries: list[str], limit: int) -> list[dict]:
+    leads: list[dict] = []
+    for query in queries:
+        result = await tavily.search(query, max_results=4, search_depth="basic")
+        for raw in result.get("results", [])[:4]:
+            lead = _customer_lead_from_search_result(
+                raw=raw,
+                query=query,
+                profile=profile,
+                opportunity=opportunity,
+                index=len(leads) + 1,
+            )
+            if lead:
+                leads.append(lead)
+            if len(leads) >= limit:
+                break
+        if len(leads) >= limit:
+            break
+    return _dedupe_customer_lead_dicts(leads)[:limit]
+
+
+def _customer_lead_queries(profile, opportunity) -> list[str]:
+    city = getattr(profile, "city", None) or ""
+    state = getattr(profile, "state", "") or ""
+    geo = " ".join(part for part in [city, state] if part).strip()
+    title = getattr(opportunity, "title", "") or "parent services"
+    category = getattr(opportunity, "category", "") or "side gig"
+    return [
+        f"{geo} moms vendor form {title}".strip(),
+        f"{geo} school vendor application parent services".strip(),
+        f"{geo} community vendor application homemade meals".strip(),
+        f"{geo} local moms group rules business post".strip(),
+        f"{title} {geo} customers parents".strip(),
+        f"{geo} {category.replace('_', ' ')} marketplace listing parents".strip(),
+    ]
+
+
+def _customer_lead_from_search_result(raw: dict, query: str, profile, opportunity, index: int) -> dict | None:
+    title = _clean_text(raw.get("title") or f"Customer path {index}", 140)
+    url = raw.get("url") or raw.get("source_url")
+    if url and not _is_safe_public_url(str(url)):
+        return None
+    content = _clean_text(raw.get("content") or raw.get("snippet") or "", 320)
+    combined = f"{title} {content} {url or ''}"
+    source_type = _classify_customer_source(combined)
+    score = raw.get("score", 0.62)
+    try:
+        confidence = float(score)
+        if confidence > 1:
+            confidence = confidence / 100
+    except (TypeError, ValueError):
+        confidence = 0.62
+    confidence = max(0.45, min(0.92, confidence))
+    city = getattr(profile, "city", None) or "local"
+    state = getattr(profile, "state", "")
+    return {
+        "id": f"tavily_customer_{index}_{_slug(title)[:32]}",
+        "title": title,
+        "source_type": source_type,
+        "source_url": url,
+        "audience_match": f"{city} {state} parents and local families connected to {getattr(opportunity, 'title', 'the offer')}",
+        "why_relevant": content or f"Public result from query: {query}",
+        "estimated_reach": _estimated_reach_for_source(source_type),
+        "confidence": confidence,
+        "live_source": True,
+        "provider": "tavily",
+        "notes": "Public web result; private groups and phone numbers were excluded.",
+    }
+
+
+def _normalize_customer_lead_dict(
+    raw: dict,
+    fallback_id: str,
+    provider: str,
+    live_source: bool,
+    profile,
+    opportunity,
+) -> dict | None:
+    title = _clean_text(raw.get("title") or fallback_id, 160)
+    url = raw.get("source_url")
+    if url and not _is_safe_public_url(str(url)):
+        return None
+    source_type = raw.get("source_type") or _classify_customer_source(f"{title} {url or ''}")
+    if source_type not in {
+        "vendor_form",
+        "community_page",
+        "school_page",
+        "marketplace",
+        "approved_group",
+        "warm_network",
+        "local_directory",
+        "event_page",
+        "manual",
+    }:
+        source_type = _classify_customer_source(f"{title} {raw.get('why_relevant', '')} {url or ''}")
+    try:
+        confidence = float(raw.get("confidence", 0.55))
+    except (TypeError, ValueError):
+        confidence = 0.55
+    city = getattr(profile, "city", None) or "local"
+    return {
+        "id": str(raw.get("id") or fallback_id),
+        "title": title,
+        "source_type": source_type,
+        "source_url": url,
+        "audience_match": _clean_text(
+            raw.get("audience_match")
+            or f"{city} parents likely to need {getattr(opportunity, 'title', 'this offer')}",
+            220,
+        ),
+        "why_relevant": _clean_text(
+            raw.get("why_relevant") or raw.get("notes") or "Public customer-acquisition path.",
+            320,
+        ),
+        "estimated_reach": _clean_text(raw.get("estimated_reach"), 120) if raw.get("estimated_reach") else None,
+        "confidence": max(0.0, min(1.0, confidence)),
+        "live_source": bool(live_source),
+        "provider": provider,
+        "notes": _clean_text(raw.get("notes"), 240) if raw.get("notes") else None,
+    }
+
+
+def _load_customer_lead_fixture(profile, opportunity, limit: int) -> list[dict]:
+    persona = getattr(profile, "persona_id", "jenny") or "jenny"
+    path = settings.cached_scrapes_dir / f"customer_leads_{persona}.json"
+    if not path.exists():
+        category = getattr(opportunity, "category", "")
+        fallback = "jessica" if category == "digital_async" else "jenny"
+        path = settings.cached_scrapes_dir / f"customer_leads_{fallback}.json"
+    raw = _load_cache_list(path)
+    leads: list[dict] = []
+    for i, item in enumerate(raw[:limit]):
+        if not isinstance(item, dict):
+            continue
+        lead = _normalize_customer_lead_dict(
+            item,
+            fallback_id=f"fixture_customer_{i + 1}",
+            provider="fixture_fallback",
+            live_source=False,
+            profile=profile,
+            opportunity=opportunity,
+        )
+        if lead:
+            lead["provider"] = "fixture_fallback"
+            lead["live_source"] = False
+            leads.append(lead)
+    return leads
+
+
+def _classify_customer_source(text: str) -> str:
+    t = text.lower()
+    if any(k in t for k in ("school", "pta", "district", "enrichment", "parent teacher")):
+        return "school_page"
+    if any(k in t for k in ("vendor", "application", "apply", "form", "catering inquiry")):
+        return "vendor_form"
+    if any(k in t for k in ("event", "fair", "market day", "farmers market", "booth")):
+        return "event_page"
+    if any(k in t for k in ("marketplace", "etsy", "facebook marketplace", "listing", "shop")):
+        return "marketplace"
+    if any(k in t for k in ("directory", "chamber", "resource guide")):
+        return "local_directory"
+    if any(k in t for k in ("group", "moms", "nextdoor", "facebook")):
+        return "community_page"
+    return "manual"
+
+
+def _estimated_reach_for_source(source_type: str) -> str:
+    return {
+        "vendor_form": "Public vendor intake path",
+        "school_page": "School or parent community audience",
+        "community_page": "Public community rules or landing page",
+        "marketplace": "Marketplace shoppers searching the category",
+        "local_directory": "Local directory visitors",
+        "event_page": "Event attendees or vendor buyers",
+        "manual": "Manual review required",
+    }.get(source_type, "Public customer path")
+
+
+def _is_safe_public_url(url: str) -> bool:
+    lowered = url.lower()
+    blocked = (
+        "web.whatsapp.com",
+        "chat.whatsapp.com",
+        "/members",
+        "/login",
+        "signin",
+        "auth",
+        "phone=",
+        "tel:",
+    )
+    return not any(part in lowered for part in blocked)
+
+
+def _dedupe_customer_lead_dicts(leads: list[dict]) -> list[dict]:
+    seen: set[tuple[str, str | None]] = set()
+    deduped: list[dict] = []
+    for lead in leads:
+        title = str(lead.get("title") or "").lower().strip()
+        url = lead.get("source_url")
+        key = (title, url)
+        if not title or key in seen:
+            continue
+        seen.add(key)
+        deduped.append(lead)
+    return deduped
+
+
+_PHONE_RE = re.compile(r"(\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}")
+
+
+def _clean_text(value: object, max_chars: int) -> str:
+    text = "" if value is None else str(value)
+    text = _PHONE_RE.sub("[phone omitted]", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text[:max_chars]
 
 
 def _slug(text: str) -> str:

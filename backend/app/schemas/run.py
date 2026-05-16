@@ -13,6 +13,9 @@ EventType = Literal[
     "winner_selected",
     "launch_packet_ready",
     "launch_published",
+    "customer_leads_found",
+    "activation_plan_ready",
+    "action_execution_result",
     "memory_pattern",
     "agent_error",
     "run_complete",
@@ -23,7 +26,10 @@ class AgentEvent(BaseModel):
     """The envelope every SSE event uses. `data` shape depends on `type`."""
 
     type: EventType
-    agent: str = Field(..., description="profile | market_scout | reality_compliance | launch | memory | system")
+    agent: str = Field(
+        ...,
+        description="profile | market_scout | reality_compliance | launch | customer_activation | memory | system",
+    )
     run_id: str
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     data: dict[str, Any] = Field(default_factory=dict)

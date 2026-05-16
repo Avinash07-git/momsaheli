@@ -1,0 +1,41 @@
+[
+  {
+    "id": "jenny_fresno_school_vendor_page",
+    "title": "Fresno parent enrichment vendor application path",
+    "source_type": "school_page",
+    "source_url": "https://www.fresnounified.org/",
+    "audience_match": "Fresno parents with school-age kids who need reliable kid-friendly meals or weekend help",
+    "why_relevant": "A public school/community vendor path is a realistic place to check whether Jenny can share a parent-friendly meal offer without using private member data.",
+    "estimated_reach": "Local school parent community",
+    "confidence": 0.62,
+    "live_source": false,
+    "provider": "fixture_fallback",
+    "notes": "Fixture fallback lead; verify current vendor rules before use."
+  },
+  {
+    "id": "jenny_fresno_event_vendor_page",
+    "title": "Fresno community event vendor page",
+    "source_type": "event_page",
+    "source_url": "https://www.fresnochamber.com/",
+    "audience_match": "Local Fresno families and community event shoppers",
+    "why_relevant": "Public event/vendor pages can surface compliant local selling paths after Jenny reviews food rules and permit limits.",
+    "estimated_reach": "Local event audience",
+    "confidence": 0.58,
+    "live_source": false,
+    "provider": "fixture_fallback",
+    "notes": "Fixture fallback lead; not a scraped private group."
+  },
+  {
+    "id": "jenny_local_parent_resource_directory",
+    "title": "Fresno local parent resource directory",
+    "source_type": "local_directory",
+    "source_url": "https://www.visitfresnocounty.org/",
+    "audience_match": "Local parents looking for family resources and services",
+    "why_relevant": "A public directory gives Jenny a manual customer path to review without collecting phone numbers or scraping group members.",
+    "estimated_reach": "Public local directory visitors",
+    "confidence": 0.50,
+    "live_source": false,
+    "provider": "fixture_fallback",
+    "notes": "Fixture fallback lead; public page only."
+  }
+]

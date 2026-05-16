@@ -168,7 +168,7 @@ export default function Home() {
           <div className="max-w-xl mb-20">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#a1a1aa] mb-4">How it works</p>
             <h2 className="font-serif text-[40px] lg:text-[50px] font-bold text-[#09090b] leading-tight tracking-tight mb-5">
-              Five agents.<br />One mom.<br />One published page.
+              Six agents.<br />One mom.<br />One published page.
             </h2>
             <p className="text-[15px] text-[#71717a] leading-relaxed">
               Each agent does one job. Together they replace the consultant, the lawyer, the marketer, and the bookkeeper.
@@ -208,7 +208,7 @@ export default function Home() {
               Run the swarm.
             </h2>
             <p className="text-[15px] text-[#71717a] leading-relaxed">
-              Two real moms. Same five agents. Completely different output. Nothing is hardcoded —
+              Two real moms. Same six agents. Completely different output. Nothing is hardcoded —
               it's the law, the constraints, and the math doing the work.
             </p>
           </div>

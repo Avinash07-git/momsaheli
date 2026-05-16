@@ -5,11 +5,14 @@ import { useAgentStream } from '../hooks/useAgentStream';
 import EvidenceCard from '../components/EvidenceCard';
 import ComplianceBlock from '../components/ComplianceBlock';
 import LaunchPacketView from '../components/LaunchPacketView';
+import ActivationPlanView from '../components/ActivationPlanView';
 import MemoryPanel from '../components/MemoryPanel';
 import type {
+  ActivationPlan,
   AgentEvent,
   ComplianceCheck,
   CrossUserPattern,
+  CustomerLead,
   EvidenceCard as EvidenceCardT,
   LaunchPacket,
   Opportunity,
@@ -26,6 +29,7 @@ const AGENTS = [
   { id: 'market_scout',       label: 'Market Scout',         doneEvent: 'opportunities_ranked' },
   { id: 'reality_compliance', label: 'Reality & Compliance', doneEvent: 'winner_selected' },
   { id: 'launch',             label: 'Launch Agent',         doneEvent: 'launch_published' },
+  { id: 'customer_activation', label: 'Customer Activation',  doneEvent: 'activation_plan_ready' },
   { id: 'memory',             label: 'Memory Agent',         doneEvent: 'memory_pattern' },
 ] as const;
 
@@ -40,13 +44,14 @@ function agentStatus(agentId: string, events: AgentEvent[]): StepStatus {
   return 'running';
 }
 
-type TabId = 'overview' | 'evidence' | 'compliance' | 'launch' | 'memory';
+type TabId = 'overview' | 'evidence' | 'compliance' | 'launch' | 'customers' | 'memory';
 
 const TABS: { id: TabId; label: string; emoji: string; desc: string; activeColor: string; activeBg: string; idleBg: string; idleColor: string }[] = [
   { id: 'overview',    label: 'Overview',    emoji: '◈', desc: 'Profile & winner',     activeColor: '#18181b', activeBg: '#f4f4f3', idleBg: '#fafafa',  idleColor: '#78716c' },
   { id: 'evidence',   label: 'Evidence',    emoji: '📊', desc: 'Market signals',       activeColor: '#1d4ed8', activeBg: '#dbeafe', idleBg: '#eff6ff',  idleColor: '#3b82f6' },
   { id: 'compliance', label: 'Compliance',  emoji: '⚖️',  desc: 'Legal checks',         activeColor: '#b91c1c', activeBg: '#fee2e2', idleBg: '#fff1f2',  idleColor: '#ef4444' },
   { id: 'launch',     label: 'Launch',      emoji: '🚀', desc: 'Ready-to-ship plan',   activeColor: '#065f46', activeBg: '#d1fae5', idleBg: '#f0fdf4',  idleColor: '#22c55e' },
+  { id: 'customers',  label: 'Customers',   emoji: '◎',  desc: 'First leads & actions', activeColor: '#047857', activeBg: '#d1fae5', idleBg: '#f0fdf4',  idleColor: '#22c55e' },
   { id: 'memory',     label: 'Memory',      emoji: '🧠', desc: 'Cross-user patterns',  activeColor: '#6b21a8', activeBg: '#f3e8ff', idleBg: '#faf5ff',  idleColor: '#a855f7' },
 ];
 
@@ -86,6 +91,10 @@ export default function Run() {
     () => events.find((e) => e.type === 'launch_packet_ready')?.data.packet ?? null, [events]);
   const publishedUrl  = useMemo<string | null>(
     () => events.find((e) => e.type === 'launch_published')?.data.url ?? null, [events]);
+  const activationPlan = useMemo<ActivationPlan | null>(
+    () => events.find((e) => e.type === 'activation_plan_ready')?.data.plan ?? null, [events]);
+  const customerLeads = useMemo<CustomerLead[]>(
+    () => events.find((e) => e.type === 'customer_leads_found')?.data.leads ?? [], [events]);
   const pattern       = useMemo<CrossUserPattern | null>(
     () => events.find((e) => e.type === 'memory_pattern')?.data.pattern ?? null, [events]);
 
@@ -104,6 +113,7 @@ export default function Run() {
     evidence:   evidenceCards.length > 0,
     compliance: checks.length > 0,
     launch:     !!launchPacket,
+    customers:  !!activationPlan || customerLeads.length > 0,
     memory:     !!pattern,
   };
 
@@ -433,7 +443,7 @@ export default function Run() {
                   <div className="flex-1 min-w-0">
                     <div className="font-serif text-2xl font-bold text-[#1c1917] mb-1">She has a plan</div>
                     <p className="text-[14px] text-[#78716c]">
-                      Five real agents finished in <span className="font-mono font-semibold text-[#1c1917]">{elapsedSec}s</span>.
+                      Six real agents finished in <span className="font-mono font-semibold text-[#1c1917]">{elapsedSec}s</span>.
                       Real LLM. Real citations. Real published page.
                     </p>
                   </div>
@@ -516,10 +526,22 @@ export default function Run() {
             </div>
           )}
 
+          {/* CUSTOMERS */}
+          {activeTab === 'customers' && (
+            <div className="max-w-3xl animate-fade-in">
+              <Eyebrow success>Step 5 · Customer Activation</Eyebrow>
+              <SectionTitle success>First leads & actions</SectionTitle>
+              <p className="text-[14px] text-[#78716c] mt-2 mb-6 max-w-xl">
+                Public customer paths, approved channels, launch messages, and the first action she can approve.
+              </p>
+              <ActivationPlanView plan={activationPlan} runId={runId} />
+            </div>
+          )}
+
           {/* MEMORY */}
           {activeTab === 'memory' && (
             <div className="max-w-3xl animate-fade-in">
-              <Eyebrow>Step 5 · Memory Agent</Eyebrow>
+              <Eyebrow>Step 6 · Memory Agent</Eyebrow>
               <SectionTitle>Cross-user intelligence</SectionTitle>
               <p className="text-[14px] text-[#78716c] mt-2 mb-6 max-w-xl">
                 Each run feeds the swarm's memory. Patterns spotted here help every future mom who runs Mom's Saheli.

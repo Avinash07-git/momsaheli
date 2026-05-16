@@ -1,0 +1,41 @@
+[
+  {
+    "id": "jessica_etsy_printable_listing_path",
+    "title": "Etsy printable listing path",
+    "source_type": "marketplace",
+    "source_url": "https://www.etsy.com/market/kids_lunch_printable",
+    "audience_match": "Parents shopping asynchronously for kids lunch ideas and printable helpers",
+    "why_relevant": "A marketplace listing path fits Jessica's no-inventory, no-delivery, fully async constraints.",
+    "estimated_reach": "Marketplace shoppers searching printable lunch ideas",
+    "confidence": 0.68,
+    "live_source": false,
+    "provider": "fixture_fallback",
+    "notes": "Fixture fallback lead; verify current marketplace rules before posting."
+  },
+  {
+    "id": "jessica_instagram_parent_content_path",
+    "title": "Instagram parent content test",
+    "source_type": "marketplace",
+    "source_url": "https://www.instagram.com/",
+    "audience_match": "Parents who save lunch ideas, printables, and low-prep family content",
+    "why_relevant": "An Instagram draft lets Jessica test the digital offer with reviewed copy and no real-time calls.",
+    "estimated_reach": "Existing social audience or hashtag discovery",
+    "confidence": 0.55,
+    "live_source": false,
+    "provider": "fixture_fallback",
+    "notes": "Fixture fallback lead; draft-only unless explicitly approved."
+  },
+  {
+    "id": "jessica_local_parent_resource_page",
+    "title": "Austin parent resource page",
+    "source_type": "community_page",
+    "source_url": "https://www.austintexas.org/",
+    "audience_match": "Austin parents looking for kid-friendly resources",
+    "why_relevant": "A public parent resource path can be reviewed manually without scraping private groups or collecting phone numbers.",
+    "estimated_reach": "Public local parent/resource audience",
+    "confidence": 0.48,
+    "live_source": false,
+    "provider": "fixture_fallback",
+    "notes": "Fixture fallback lead; public page only."
+  }
+]

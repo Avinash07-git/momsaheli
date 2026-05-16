@@ -24,8 +24,10 @@ async def generate_packet(opportunity: Opportunity, profile: Profile) -> LaunchP
         "and output a strict-JSON LaunchPacket with these fields: "
         "opportunity_id, offer_name, offer_tagline, price_usd (number), unit, description_markdown, "
         "target_customer, outreach_drafts (list of {channel:'nextdoor'|'facebook_group'|'text_friends'|"
-        "'etsy_listing'|'instagram', subject?, body_markdown}), and day_plan "
+        "'etsy_listing'|'instagram'|'whatsapp_group'|'vendor_form'|'marketplace_listing'|'email'|'manual', "
+        "subject?, body_markdown}), and day_plan "
         "(list of 7 {day:int 1..7, action:str, estimated_minutes:int}). "
+        "Choose channels from the mom's preferred/approved channels when present. "
         "Make the copy warm but not saccharine. Concrete numbers. No jargon. No emojis in the offer_name."
     )
     user = json.dumps({
@@ -81,7 +83,7 @@ def _fallback_packet(opp: Opportunity, profile: Profile) -> LaunchPacket:
                 "body_markdown": f"New on the block: **{opp.title}**. First 10 orders get a thank-you discount.",
             },
             {
-                "channel": "text_friends",
+                "channel": "whatsapp_group" if "whatsapp_group" in profile.preferred_channels else "text_friends",
                 "subject": None,
                 "body_markdown": f"Hey! Starting something small — **{opp.title}**. Mind sharing with anyone who'd love it? 🙏",
             },

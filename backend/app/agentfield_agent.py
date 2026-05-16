@@ -1,4 +1,4 @@
-"""AgentField integration — wraps the 5-agent swarm as @reasoner endpoints.
+"""AgentField integration — wraps the 6-agent swarm as @reasoner endpoints.
 
 Run this as a standalone process alongside uvicorn:
     python -m app.agentfield_agent
@@ -24,6 +24,7 @@ import requests
 from agentfield import Agent, AIConfig
 
 from app.agents import (
+    run_customer_activation_agent,
     run_launch_agent,
     run_market_scout,
     run_memory_agent,
@@ -31,7 +32,7 @@ from app.agents import (
     run_reality_compliance,
 )
 from app.adapters import bright_data
-from app.schemas import ComplianceCheck, Opportunity
+from app.schemas import ComplianceCheck, LaunchPacket, Opportunity
 from app.settings import settings
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -74,9 +75,9 @@ af = Agent(
     agentfield_server=settings.AGENTFIELD_CONTROL_PLANE_URL,
     version="0.1.0",
     description=(
-        "5-agent swarm that surfaces realistic side-income opportunities for "
+        "6-agent swarm that surfaces realistic side-income opportunities for "
         "working moms, checks compliance against real state law, and publishes "
-        "a real launch page."
+        "a real launch page with approval-gated customer activation."
     ),
     tags=["hackathon", "economic-mobility", "multi-agent", "moms-saheli"],
     ai_config=AIConfig(model=f"google/{settings.GEMINI_MODEL}"),
@@ -87,7 +88,7 @@ af = Agent(
 
 
 # ──────────────────────────────────────────────────────────────────────────
-# 5 child reasoners — each delegates to the canonical run_*_agent function.
+# 6 child reasoners — each delegates to the canonical run_*_agent function.
 # These are independently callable (judges can curl them) AND get nested under
 # run_full_swarm when invoked from there via AgentField's contextvar tracking.
 # ──────────────────────────────────────────────────────────────────────────
@@ -139,6 +140,16 @@ async def launch_agent(raw_profile: dict, opportunity: dict) -> dict:
     }
 
 
+@af.reasoner(tags=["customer-activation", "leads", "approval-gated"])
+async def customer_activation_agent(raw_profile: dict, winner: dict, launch_packet: dict) -> dict:
+    """Find customer leads and rank approval-gated first-customer actions."""
+    profile = await run_profile_agent(raw_profile)
+    winner_opp = Opportunity.model_validate(winner)
+    packet = LaunchPacket.model_validate(launch_packet)
+    plan = await run_customer_activation_agent(profile, winner_opp, packet)
+    return plan.model_dump(mode="json")
+
+
 @af.reasoner(tags=["memory", "persistence", "cross-user"])
 async def memory_agent(
     run_id: str,
@@ -163,15 +174,15 @@ async def memory_agent(
 
 
 # ──────────────────────────────────────────────────────────────────────────
-# Orchestrator reasoner — awaits the 5 children so the dashboard renders
+# Orchestrator reasoner — awaits the 6 children so the dashboard renders
 # a proper nested execution waterfall (THE sponsor-genuine moment).
 # ──────────────────────────────────────────────────────────────────────────
 @af.reasoner(tags=["orchestrator", "swarm", "end-to-end"])
 async def run_full_swarm(raw_profile: dict) -> dict:
-    """Run the complete 5-agent pipeline end-to-end.
+    """Run the complete 6-agent pipeline end-to-end.
 
     Calls each child @reasoner in sequence so the AgentField dashboard renders
-    one parent execution with 5 child spans, each with its own
+    one parent execution with 6 child spans, each with its own
     inputs/outputs/timings/tags. This is the 'sponsor-genuine' moment vs.
     a flat opaque call.
     """
@@ -201,7 +212,10 @@ async def run_full_swarm(raw_profile: dict) -> dict:
     # 4. Launch (offer + copy + real published page)
     launch = await launch_agent(raw_profile, winner)
 
-    # 5. Memory (persist trajectory + surface cross-user pattern)
+    # 5. Customer Activation (public leads + approval-gated first action)
+    activation = await customer_activation_agent(raw_profile, winner, launch["packet"])
+
+    # 6. Memory (persist trajectory + surface cross-user pattern)
     rejected = [o for o in opportunities if o["id"] != winner["id"]]
     memory = await memory_agent(
         run_id=run_id,
@@ -218,6 +232,7 @@ async def run_full_swarm(raw_profile: dict) -> dict:
         "profile": profile,
         "winner": winner,
         "launch_url": launch["launch_url"],
+        "activation_plan": activation,
         "pattern": memory["pattern"],
         "compliance_summary": {
             "blocks": sum(1 for c in checks if c["verdict"] == "BLOCK"),

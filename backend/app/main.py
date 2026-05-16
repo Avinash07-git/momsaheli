@@ -25,8 +25,10 @@ from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from sse_starlette.sse import EventSourceResponse
 
-from app.adapters import butterbase, evermind
-from app.orchestrator import EVENT_BUS, SwarmRunner
+from app.adapters import actionbook, butterbase, evermind
+from app.orchestrator import ACTIVATION_PLANS, EVENT_BUS, SwarmRunner
+from app.schemas import AgentEvent
+from app.schemas.action import ActionExecutionRequest, ActionExecutionResult
 from app.settings import settings
 
 # ----- Logging -----
@@ -139,6 +141,44 @@ async def get_memory() -> dict[str, Any]:
         "trajectories": evermind.trajectories_for_history(),
         "cross_user_pattern": pattern.model_dump(mode="json") if pattern else None,
     }
+
+
+@app.post("/api/runs/{run_id}/actions/{action_id}/execute")
+async def execute_activation_action(
+    run_id: str,
+    action_id: str,
+    body: ActionExecutionRequest,
+) -> ActionExecutionResult:
+    plan = ACTIVATION_PLANS.get(run_id)
+    if not plan:
+        raise HTTPException(404, "Activation plan not found for this run")
+
+    action = next((a for a in plan.actions if a.id == action_id), None)
+    if not action:
+        raise HTTPException(404, "Action not found")
+
+    if not body.approved:
+        result = ActionExecutionResult(
+            action_id=action_id,
+            status="blocked",
+            message="Blocked: no action can run until the user approves it.",
+        )
+    else:
+        raw = await actionbook.execute_activation_action(
+            action=action.model_dump(mode="json"),
+            approved=body.approved,
+            submit_or_post=body.submit_or_post,
+        )
+        raw.setdefault("action_id", action_id)
+        result = ActionExecutionResult.model_validate(raw)
+
+    await EVENT_BUS.publish(AgentEvent(
+        type="action_execution_result",
+        agent="customer_activation",
+        run_id=run_id,
+        data={"result": result.model_dump(mode="json")},
+    ))
+    return result
 
 
 # ----- Public launch page -----

@@ -27,7 +27,7 @@
 9. ✅ `backend/app/agentfield_agent.py` — 6 `@reasoner` endpoints, preflight check, exits 0 gracefully if CP unreachable
 10. ✅ `scripts/start.sh` — crash-proof: auto-detects `af`, auto-detects npm in `/tmp/node-v*`, skips AF cleanly if missing
 11. ✅ AgentField dashboard verified live at `http://localhost:8080/ui/` with 1 agent, 6 reasoners
-12. ✅ `run_full_swarm` now calls 5 child reasoners in sequence → **nested waterfall in dashboard** (THE demo moment)
+12. ✅ `run_full_swarm` now calls 6 child reasoners in sequence → **nested waterfall in dashboard** (THE demo moment)
 13. ✅ Full UI overhaul — editorial-premium design system, every surface polished
 14. ✅ NavBar shows live "● Live workflow ↗" link auto-detected from `/health`
 
@@ -37,7 +37,7 @@
 
 **👉 Exact next actions at hackathon Day 2:**
 1. **Deploy to Zeabur** — non-negotiable for judging ("must be live, not localhost"). Code: `BUILDER0516` at zeabur.com/events
-2. Grab **Qwen Cloud key** at booth → paste `QWEN_API_KEY` → cascade promotes Qwen to primary
+2. Grab **Qwen Cloud key** at booth → paste `QWEN_API_KEY` → cascade slot is ready; Gemini remains active today
 3. Grab **Bright Data zone** at booth → paste `BRIGHT_DATA_ZONE` → swap from Tavily in 1 line
 4. Grab **Actionbook key** at booth → paste `ACTIONBOOK_API_KEY` + `ACTIONBOOK_WORKSPACE_ID` → live browser actions
 5. Grab **Evermind, Z.ai, TokenRouter** keys at booths → all activate on key presence
@@ -67,7 +67,7 @@ Avinash, paired with Avi (his code agent, that's me).
 
 ---
 
-## 2. The Five Agents (the swarm)
+## 2. The Six Agents (the swarm)
 
 | # | Agent | File | What it does | Live? |
 |---|---|---|---|---|
@@ -75,7 +75,8 @@ Avinash, paired with Avi (his code agent, that's me).
 | 2 | **Market Scout** | `app/agents/market_scout.py` | Pull evidence cards (Etsy/Castiron/Nextdoor/FB) + rank opportunities | ✅ **Real Gemini** ranks; evidence cards are cached fixtures (Actionbook key coming) |
 | 3 | **Reality & Compliance** | `app/agents/reality_compliance.py` | Check each opp against constraints + state cottage-food law, BLOCK with citation | ✅ **Real Tavily** scrapes state law (`.gov` URLs); constraint math deterministic |
 | 4 | **Launch Agent** | `app/agents/launch_agent.py` | Generate offer name / tagline / price / target / 7-day plan / landing page | ✅ **Real Gemini** writes the whole packet + page renders via Jinja2 |
-| 5 | **Memory Agent** | `app/agents/memory_agent.py` | Persist run trajectory + surface cross-user learned pattern | 🟡 Local mirror works; real Evermind API pending key |
+| 5 | **Customer Activation Agent** | `app/agents/customer_activation_agent.py` | Find public customer paths, include approved mom channels, rank approval-gated first-customer actions | ✅ Live logic + Bright Data/Tavily/fixture fallback |
+| 6 | **Memory Agent** | `app/agents/memory_agent.py` | Persist run trajectory + surface cross-user learned pattern | 🟡 Local mirror works; real Evermind API pending key |
 
 The orchestrator (`app/orchestrator/runner.py`) wires them, streams every event over
 SSE to the React frontend, and writes a real launch page to `/launch/{slug}`.
@@ -90,6 +91,7 @@ SSE to the React frontend, and writes a real launch page to `/launch/{slug}`.
 - **FastAPI backend** on `:8000` with SSE streaming (`/api/stream/{run_id}`)
 - **React + Vite frontend** on `:5173` with live timeline UI
 - **Real launch pages** rendered server-side (`/launch/{slug}`)
+- **Customer Activation Agent** with public lead search, approved channels, and approval-gated action ranking
 - **Local persistence** of runs + pages in `backend/app/_local_store/` (gitignored)
 - **Two personas** (Jenny in CA = food/permit BLOCKs, Jessica in TX = digital/PASS)
 
@@ -100,7 +102,7 @@ SSE to the React frontend, and writes a real launch page to `/launch/{slug}`.
 - **Actionbook**, **Evermind**, **Butterbase** — adapters exist, key checks gate them, fixtures cover the path
 
 ### ✅ Built and verified this session
-- **AgentField** — `af` CLI installed; `agentfield_agent.py` wraps all 5 agents as 6 `@reasoner`s;
+- **AgentField** — `af` CLI installed; `agentfield_agent.py` wraps all 6 agents as 7 `@reasoner`s;
   dashboard live at `http://localhost:8080/ui/`; `scripts/start.sh` boots the full stack.
 - **Demo polish** — sponsor logo badges on each timeline event, citation tooltips
 - **Backup demo video** — Loom recording for "internet died on stage" insurance
@@ -128,7 +130,7 @@ not hardcoded.
 
 | Decision | Rationale |
 |---|---|
-| LLM cascade order: **Gemini → Qwen → Z.ai** | Gemini is the only LLM with a real key today. Qwen becomes primary tomorrow when sponsor key arrives — just need to reorder the providers list in `llm_cascade.py`. |
+| LLM cascade order: **Gemini → Qwen → Z.ai** | Gemini is the active LLM today. Qwen remains cascade-ready for a future sponsor slot, but the current app must not be described as Qwen-powered. |
 | **Tavily as Bright Data stand-in** | BD account has no zone; creating one needs a payment method. Tavily is free, returns clean JSON. Same return shape so swap is 1 line. |
 | **Cache state-law scrape per profile** | Saves N-1 redundant Tavily calls (all opps share same state). Scrape happens once, passed into Compliance as `pre_fetched_law=...`. |
 | **Parallel prefetch state-law with Gemini ranking** | Both depend only on profile. Saves ~3s. |
@@ -144,12 +146,13 @@ not hardcoded.
 
 ```
 backend/app/
-├── orchestrator/runner.py   ← The 5-agent choreography + SSE emits
+├── orchestrator/runner.py   ← The 6-agent choreography + SSE emits
 ├── agents/                  ← One file per agent, ~150 lines each
 ├── adapters/                ← One file per external service (sponsor)
 │   ├── llm_cascade.py       ← Gemini/Qwen/Z.ai providers
 │   ├── tavily.py            ← Live web search
 │   ├── bright_data.py       ← Has 3-tier fallback: BD → Tavily → fixture
+│   ├── actionbook.py        ← Approval-gated browser actions
 │   └── ...
 ├── schemas/                 ← Pydantic models — START HERE for any change
 ├── fixtures/                ← Personas + cached scrapes (offline safety net)
@@ -165,6 +168,17 @@ docs/                       ← Design context (see docs/README.md for the map)
 ├── NORTH_STAR.md            ← mission, what we say NO to
 ├── DEMO_SCRIPT.md           ← the 90-sec stage pitch
 └── legacy/                  ← pre-build docs, tagged "may have drifted"
+```
+
+Customer activation touches these files most often:
+
+```
+backend/app/schemas/action.py
+backend/app/agents/customer_activation_agent.py
+backend/app/adapters/bright_data.py
+backend/app/adapters/actionbook.py
+frontend/src/components/ActivationPlanView.tsx
+frontend/src/pages/Run.tsx
 ```
 
 ---
@@ -204,7 +218,7 @@ If `uv` isn't installed: `brew install uv` (mac). `setup.sh` auto-detects Walmar
 | `TAVILY_API_KEY` | https://tavily.com | Free 1000 searches/mo. Avinash has one. |
 | `BRIGHT_DATA_API_TOKEN` | https://brightdata.com/cp/api_keys | Token works; **zone TBD tomorrow at booth**. |
 | `BRIGHT_DATA_ZONE` | Bright Data dashboard | Create "Web Unlocker" zone, name it `web_unlocker1`. |
-| `QWEN_API_KEY` | Pickup at hackathon booth (Day 2) | Once set, cascade promotes Qwen to primary. |
+| `QWEN_API_KEY` | Pickup at hackathon booth (Day 2) | Cascade-ready future slot; Gemini remains active today. |
 | All others | Sponsor booths | Adapter exists; flips on as soon as key arrives. |
 
 **`.env` is gitignored.** To sync keys across laptops, manually copy `.env` via 1Password
@@ -223,7 +237,7 @@ Asked at end of last session, timed out — pick these up when he's back:
    - (d) Parallelize via predictive packet generation
 
 2. **Next big build?**
-   - (a) Full AgentField refactor (5 distinct `@reasoner`s)
+   - (a) Full AgentField refactor (6 distinct child `@reasoner`s)
    - (b) AgentField hybrid wrap (1 reasoner, dashboard lights up)
    - (c) UI polish (sponsor logos, animations)
    - (d) Record backup demo video
@@ -243,6 +257,8 @@ Asked at end of last session, timed out — pick these up when he's back:
   (The package is technically deprecated for `google-genai`, but works fine for now.)
 - **Tavily's `answer` field is a synthesized summary** — perfect for `citation_text`,
   avoids us having to summarize.
+- **Do not auto-post or auto-submit. External actions require explicit user approval.**
+- **Do not scrape private groups, private members, or phone numbers.**
 - **The Bright Data SDK auto-tries to create a `sdk_unlocker` zone** on context-manager
   enter; this 403s without a payment method. Always pass `auto_create_zones=False`.
 - **Etsy is digital-only** in our taxonomy — never route prepared-food evidence to it.

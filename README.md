@@ -1,7 +1,7 @@
 # 🌸 Mom's Saheli
 
 > **The friend every working mom can finally afford.**
-> A 5-agent swarm that surfaces real income paths for the underbanked workforce —
+> A 6-agent swarm that surfaces real income paths for the underbanked workforce —
 > starting with America's 7 million single moms.
 
 **Agent Forge AI Hackathon** · San Francisco · May 16 2026 · solo build.
@@ -37,7 +37,7 @@ They're not short on effort. They're short on **margin**. Mom's Saheli closes th
 
 ## ✨ What it does
 
-Click **Run Jenny** (or **Run Jessica**) and watch 5 AI agents collaborate live:
+Click **Run Jenny** (or **Run Jessica**) and watch 6 AI agents collaborate live:
 
 | # | Agent | What it does | Sponsor |
 |---|---|---|---|
@@ -45,11 +45,12 @@ Click **Run Jenny** (or **Run Jessica**) and watch 5 AI agents collaborate live:
 | 2 | **Market Scout** | Pull evidence cards (Etsy / Castiron / FB groups), rank by realistic net monthly $ via Gemini | Bright Data + Actionbook + Gemini |
 | 3 | **Reality & Compliance** | Web-search the state's actual cottage-food law, **block illegal options with the live `.gov` citation on screen** | Tavily / Bright Data |
 | 4 | **Launch** | Write the offer, copy, price, target customer + 7-day plan; publish a real shareable landing page | Gemini + Actionbook + Butterbase |
-| 5 | **Memory** | Persist trajectory + surface a cross-user learned pattern | Evermind |
+| 5 | **Customer Activation** | Find public customer paths, include approved mom channels, rank approval-gated first-customer actions | Bright Data / Tavily + Actionbook |
+| 6 | **Memory** | Persist trajectory + surface a cross-user learned pattern | Evermind |
 
-**Two real moms. Same five agents. Completely different output.**
+**Two real moms. Same six agents. Completely different output.**
 Jenny's #1 ranked option gets BLOCKED by California cottage-food law → pivots to a legal winner.
-Jessica's digital-only path wins clean with zero compliance hits.
+Jenny then gets a local, mom-network first-customer move; Jessica gets async, draft-only digital actions.
 Proves nothing is hardcoded — it's the regulation, the constraints, and the math doing the work.
 
 ---
@@ -71,13 +72,13 @@ That boots **4 processes** with auto-fallbacks:
 |---|---|---|
 | AgentField control plane | `:8080` | `af` CLI not installed (just shows install hint) |
 | FastAPI backend (SSE streaming) | `:8000` | never — the demo path |
-| AgentField agent (6 reasoners) | `:8001` | `AGENTFIELD_API_KEY` empty OR `:8080` unreachable |
+| AgentField agent (7 reasoners) | `:8001` | `AGENTFIELD_API_KEY` empty OR `:8080` unreachable |
 | React frontend | `:5173` | never |
 
 Then visit **http://localhost:5173** and click **Run Jenny**.
 ~38 seconds of real LLM work, real BLOCKs with real `.gov` citations, real launch page at `/launch/{slug}`.
 
-For judges: hop to **http://localhost:8080/ui/** to see the **AgentField nested execution waterfall** — one parent (`run_full_swarm`) with 5 child spans, each with its own inputs/outputs/timings.
+For judges: hop to **http://localhost:8080/ui/** to see the **AgentField nested execution waterfall** — one parent (`run_full_swarm`) with 6 child spans, each with its own inputs/outputs/timings.
 
 ---
 
@@ -92,7 +93,7 @@ For judges: hop to **http://localhost:8080/ui/** to see the **AgentField nested 
                     ┌────────────▼────────────────────────────┐
                     │     FastAPI backend (:8000)             │
                     │  ┌───────────────────────────────────┐  │
-                    │  │  SwarmRunner — orchestrates 5     │  │
+                    │  │  SwarmRunner — orchestrates 6     │  │
                     │  │  agents, emits SSE per step       │  │
                     │  └────┬──────────────────────────────┘  │
                     └───────┼─────────────────────────────────┘
@@ -107,12 +108,12 @@ For judges: hop to **http://localhost:8080/ui/** to see the **AgentField nested 
                                                            │
                           ┌────────────────────────────────┘
                           ▼
-                   ┌─────────────┐    ┌──────────────────┐
-                   │   Launch    │ →  │     Memory       │
-                   │ (Gemini +   │    │ (Evermind cross  │
-                   │  Butterbase │    │  -user pattern)  │
-                   │  publish)   │    └──────────────────┘
-                   └─────────────┘
+                   ┌─────────────┐    ┌──────────────────┐    ┌──────────────────┐
+                   │   Launch    │ →  │ Customer         │ →  │     Memory       │
+                   │ (Gemini +   │    │ Activation       │    │ (Evermind cross  │
+                   │  Butterbase │    │ (public leads +  │    │  -user pattern)  │
+                   │  publish)   │    │  approvals)      │    └──────────────────┘
+                   └─────────────┘    └──────────────────┘
 
                   ┌─────────────────────────────────────────┐
                   │ AgentField agent (:8001)                │
@@ -134,12 +135,15 @@ Full architecture doc: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md).
 | State law web search + citation | ✅ **LIVE** | Tavily free SERP returning real `.gov` URLs |
 | Constraint math (BLOCK logic) | ✅ **LIVE** | Deterministic Python, not LLM-hallucinated |
 | FastAPI backend + SSE streaming | ✅ **LIVE** | Every agent step streams to UI in real time |
-| AgentField 6-reasoner nested waterfall | ✅ **LIVE** | One parent, 5 nested child spans in dashboard |
+| AgentField 7-reasoner nested waterfall | ✅ **LIVE** | One parent, 6 nested child spans in dashboard |
 | Server-rendered launch pages | ✅ **LIVE** | Jinja2 + Tailwind, real shareable URL |
 | Local persistence (runs + pages) | ✅ **LIVE** | File-backed mirror of Butterbase contract |
+| Customer Activation Agent | ✅ **LIVE** | Deterministic action ranking with live lead logic + fixture fallback |
+| Customer Lead Search | 🟡 Live when configured | Bright Data/Tavily when configured, fixture fallback otherwise |
+| Actionbook Activation | 🟡 Approval-gated | Preview/fallback when key missing; no post or submit without explicit approval |
 | Bright Data scraping | 🟡 Token works, zone pending | Will swap from Tavily in 1 line at booth |
 | Actionbook browser actions | 🟡 Adapter ready | Activates on `ACTIONBOOK_API_KEY` |
-| Qwen primary LLM | 🟡 Cascade slot ready | Activates on `QWEN_API_KEY` |
+| Qwen future cascade slot | 🟡 Cascade-ready sponsor slot | Activates on `QWEN_API_KEY`; Gemini remains current active LLM |
 | Z.ai GLM fallback | 🟡 Adapter ready | Activates on `ZAI_API_KEY` |
 | Evermind cross-user memory | 🟡 Local mirror | Activates on `EVERMIND_API_KEY` |
 | Butterbase product backend | 🟡 Local mirror | Activates on `BUTTERBASE_API_KEY` |
@@ -161,10 +165,12 @@ screen lies to the user.
 | **Memory** | [Evermind](https://evermind.ai) | Cross-user pattern surfacing, not single-session |
 | **Product backend** | [Butterbase](https://butterbase.ai) | Hosts the actual published launch pages |
 | **LLM (today)** | [Gemini 2.5 Flash](https://ai.google.dev) | Free + fast + reliable JSON mode |
-| **LLM (sponsor primary)** | [Qwen Cloud](https://qwencloud.com) | Cascade auto-promotes when key lands |
+| **LLM (future cascade slot)** | [Qwen Cloud](https://qwencloud.com) | Cascade-ready sponsor slot when key lands |
 | **LLM (fallback)** | [Z.ai GLM-4 Plus](https://docs.z.ai) | Final cascade tier |
 | **LLM routing** | [TokenRouter](https://tokenrouter.com) | Smart cost-per-token routing |
 | **Deployment** | [Zeabur](https://zeabur.com) | Promo code `BUILDER0516` — one-click stack deploy |
+
+Deployment stays on the existing `zbpack.toml`: build the Vite frontend, install the FastAPI backend, and start `uvicorn`.
 
 ---
 
@@ -179,7 +185,7 @@ momsaheli/
 │   ├── setup.sh                     # one-command fresh-laptop setup
 │   └── start.sh                     # boots all 4 processes; Ctrl+C kills all
 ├── docs/
-│   ├── ARCHITECTURE.md              # the 5-agent diagram + sponsor mapping
+│   ├── ARCHITECTURE.md              # the agent diagram + sponsor mapping
 │   ├── NORTH_STAR.md                # mission + what we say NO to
 │   ├── DEMO_SCRIPT.md               # 90-second stage pitch
 │   └── legacy/                      # pre-build docs (tagged stale)
@@ -197,7 +203,7 @@ momsaheli/
 │       │   ├── evermind.py
 │       │   ├── butterbase.py
 │       │   └── token_router.py
-│       ├── agents/                  # the 5 agents
+│       ├── agents/                  # the 6 agents
 │       ├── orchestrator/            # SwarmRunner + SSE emits
 │       ├── fixtures/                # personas (jenny, jessica) + cached scrapes
 │       └── templates/launch_page.html

@@ -1,5 +1,9 @@
 """Profile — the user (mom) input to the swarm."""
+from typing import Literal
+
 from pydantic import BaseModel, Field
+
+from app.schemas.action import ApprovedChannel
 
 
 class Profile(BaseModel):
@@ -17,3 +21,8 @@ class Profile(BaseModel):
         description="e.g. ['no_nights', 'no_delivery', 'no_commercial_kitchen']",
     )
     notes: str | None = None
+    assets: list[str] = Field(default_factory=list)
+    preferred_channels: list[str] = Field(default_factory=list)
+    approved_channels: list[ApprovedChannel] = Field(default_factory=list)
+    marketing_permission_level: Literal["draft_only", "fill_no_submit", "post_after_review"] = "draft_only"
+    service_radius_miles: int | None = None

@@ -9,5 +9,27 @@
   "state": "TX",
   "city": "Austin",
   "hard_constraints": ["no_phone_calls", "no_delivery", "no_inventory", "fully_async"],
-  "notes": "Wants something purely digital. One school-age kid. Comfortable on a laptop after work."
+  "notes": "Wants something purely digital. One school-age kid. Comfortable on a laptop after work.",
+  "assets": [
+    "Canva",
+    "laptop",
+    "existing printable examples"
+  ],
+  "preferred_channels": [
+    "friends_text",
+    "instagram",
+    "marketplace"
+  ],
+  "approved_channels": [
+    {
+      "id": "jessica_warm_parent_texts",
+      "type": "friends_text",
+      "name": "Jessica's warm parent friends",
+      "audience": "Parents who already ask Jessica for lunch ideas and printables",
+      "user_approved": true,
+      "allowed_actions": ["draft"]
+    }
+  ],
+  "marketing_permission_level": "draft_only",
+  "service_radius_miles": null
 }

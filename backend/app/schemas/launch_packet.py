@@ -3,7 +3,18 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-ChannelType = Literal["nextdoor", "facebook_group", "text_friends", "etsy_listing", "instagram"]
+ChannelType = Literal[
+    "nextdoor",
+    "facebook_group",
+    "text_friends",
+    "etsy_listing",
+    "instagram",
+    "whatsapp_group",
+    "vendor_form",
+    "marketplace_listing",
+    "email",
+    "manual",
+]
 
 
 class OutreachDraft(BaseModel):

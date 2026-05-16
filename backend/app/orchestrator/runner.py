@@ -1,4 +1,4 @@
-"""Swarm runner — wires the 5 agents and emits SSE events.
+"""Swarm runner — wires the 6 agents and emits SSE events.
 
 EVENT_BUS is a tiny pub/sub keyed by run_id. The FastAPI SSE endpoint subscribes
 to a run_id and yields events as they arrive.
@@ -19,13 +19,14 @@ from typing import Any, AsyncIterator
 
 from app.adapters import butterbase, bright_data
 from app.agents import (
+    run_customer_activation_agent,
     run_launch_agent,
     run_market_scout,
     run_memory_agent,
     run_profile_agent,
     run_reality_compliance,
 )
-from app.schemas import AgentEvent, RunSummary
+from app.schemas import AgentEvent, ActivationPlan, RunSummary
 
 log = logging.getLogger(__name__)
 
@@ -56,10 +57,11 @@ class _EventBus:
 
 
 EVENT_BUS = _EventBus()
+ACTIVATION_PLANS: dict[str, ActivationPlan] = {}
 
 
 class SwarmRunner:
-    """One swarm execution. Wires the 5 agents, emits events, returns a run_id."""
+    """One swarm execution. Wires the 6 agents, emits events, returns a run_id."""
 
     def __init__(self, raw_profile: dict[str, Any]):
         self.run_id = f"run_{uuid.uuid4().hex[:12]}"
@@ -138,7 +140,23 @@ class SwarmRunner:
             await self._emit("launch_published", "launch", {"url": launch_url, "slug": launch_url.rsplit("/", 1)[-1]})
             await asyncio.sleep(0.2)
 
-            # --- 5. Memory Agent ---
+            # --- 5. Customer Activation Agent ---
+            activation_plan = await run_customer_activation_agent(profile, winner, packet)
+            ACTIVATION_PLANS[self.run_id] = activation_plan
+            await self._emit(
+                "customer_leads_found",
+                "customer_activation",
+                {"leads": [lead.model_dump(mode="json") for lead in activation_plan.leads]},
+            )
+            await asyncio.sleep(0.2)
+            await self._emit(
+                "activation_plan_ready",
+                "customer_activation",
+                {"plan": activation_plan.model_dump(mode="json")},
+            )
+            await asyncio.sleep(0.2)
+
+            # --- 6. Memory Agent ---
             _, pattern = await run_memory_agent(
                 run_id=self.run_id,
                 profile=profile,
