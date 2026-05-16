@@ -1,0 +1,1355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mom's Saheli — Agent Forge AI Hackathon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --brand-50:#fffbeb;
+    --brand-100:#fef3c7;
+    --brand-300:#fcd34d;
+    --brand-500:#f59e0b;
+    --brand-600:#d97706;
+    --brand-700:#b45309;
+    --cream:#fdf8f0;
+    --ink-900:#18181b;
+    --ink-700:#3f3f46;
+    --ink-500:#71717a;
+    --ink-300:#a1a1aa;
+    --ink-100:#f4f4f3;
+    --rose-300:#fda4af;
+    --success:#15803d;
+    --warn:#b45309;
+    --danger:#b91c1c;
+    --grad-warm: linear-gradient(135deg,#b45309 0%,#d97706 35%,#f59e0b 100%);
+    --shadow-soft: 0 10px 30px -12px rgba(24,24,27,0.18);
+    --shadow-lift: 0 24px 60px -22px rgba(24,24,27,0.28);
+    --serif: 'Fraunces', Georgia, 'Times New Roman', serif;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+  }
+
+  *,*::before,*::after{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ height:100%; }
+  body{
+    font-family: var(--sans);
+    color: var(--ink-900);
+    background: var(--cream);
+    overflow:hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* ===== Slide host ===== */
+  .deck{ position:relative; width:100vw; height:100vh; overflow:hidden; }
+  .slide{
+    position:absolute; inset:0;
+    width:100vw; height:100vh;
+    padding: 6vh 7vw;
+    display:flex; flex-direction:column;
+    opacity:0; pointer-events:none;
+    transition: opacity .6s ease, transform .6s cubic-bezier(.2,.7,.2,1);
+    transform: translateY(14px);
+    overflow:hidden;
+  }
+  .slide.active{ opacity:1; pointer-events:auto; transform:translateY(0); }
+
+  /* ===== Typography ===== */
+  .eyebrow{
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--brand-700);
+  }
+  .display{
+    font-family: var(--serif);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.02;
+    color: var(--ink-900);
+  }
+  .display-xl{ font-size: clamp(48px, 7.4vw, 112px); }
+  .display-lg{ font-size: clamp(40px, 5.6vw, 84px); }
+  .display-md{ font-size: clamp(32px, 4.2vw, 60px); }
+  .grad-text{
+    background: var(--grad-warm);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+  .italic{ font-style: italic; font-variation-settings: "opsz" 144; }
+  .lead{
+    font-size: clamp(17px,1.5vw,22px);
+    line-height: 1.55;
+    color: var(--ink-700);
+    max-width: 70ch;
+  }
+  .mono{ font-family: var(--mono); }
+
+  /* ===== Decorative orbs ===== */
+  .orb{
+    position:absolute;
+    border-radius:50%;
+    filter: blur(70px);
+    pointer-events:none;
+    z-index:0;
+  }
+  .orb-amber{ background: rgba(252,211,77,0.35); }
+  .orb-rose{ background: rgba(253,164,175,0.22); }
+
+  /* ===== Backgrounds ===== */
+  .bg-cream{ background: var(--cream); }
+  .bg-warm{
+    background:
+      radial-gradient(1100px 700px at 12% 18%, #fff6e2 0%, transparent 60%),
+      radial-gradient(900px 600px at 95% 90%, #fde6d6 0%, transparent 65%),
+      var(--cream);
+  }
+  .bg-ink{
+    background:
+      radial-gradient(900px 600px at 80% 10%, rgba(245,158,11,0.18) 0%, transparent 60%),
+      radial-gradient(700px 500px at 10% 90%, rgba(253,164,175,0.12) 0%, transparent 60%),
+      #0f0f12;
+    color: var(--ink-100);
+  }
+  .bg-ink .display, .bg-ink .lead{ color: var(--ink-100); }
+  .bg-ink .eyebrow{ color: var(--brand-500); }
+
+  /* ===== Surfaces ===== */
+  .surface{
+    background: #ffffff;
+    border: 1px solid rgba(24,24,27,0.06);
+    border-radius: 20px;
+    box-shadow: var(--shadow-soft);
+  }
+  .surface-warm{
+    background: linear-gradient(180deg,#ffffff 0%, #fffaf0 100%);
+    border: 1px solid rgba(180,83,9,0.10);
+    border-radius: 20px;
+    box-shadow: var(--shadow-soft);
+  }
+  .surface-ink{
+    background: #1a1a1f;
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 20px;
+    box-shadow: 0 24px 60px -28px rgba(0,0,0,0.55);
+  }
+
+  /* ===== Navigation chrome ===== */
+  .nav{
+    position:fixed; bottom:18px; left:50%; transform:translateX(-50%);
+    display:flex; gap:6px; align-items:center;
+    background: rgba(24,24,27,0.86);
+    color:#fff;
+    padding: 8px 10px 8px 14px;
+    border-radius: 999px;
+    z-index: 100;
+    font-family: var(--sans);
+    font-size: 13px;
+    backdrop-filter: blur(8px);
+    box-shadow: var(--shadow-lift);
+  }
+  .nav button{
+    background: transparent;
+    border:none;
+    color:#fff;
+    width:32px; height:32px;
+    border-radius: 999px;
+    cursor:pointer;
+    display:inline-flex; align-items:center; justify-content:center;
+    transition: background .2s;
+  }
+  .nav button:hover{ background: rgba(255,255,255,0.10); }
+  .nav .counter{
+    font-family: var(--mono);
+    font-size: 12px;
+    color: #f4f4f3;
+    padding: 0 12px;
+    min-width: 62px; text-align:center;
+    letter-spacing: 0.06em;
+  }
+  .corner-counter{
+    position: fixed; top: 18px; right: 22px;
+    z-index: 100;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--ink-500);
+    letter-spacing: 0.12em;
+    background: rgba(255,255,255,0.7);
+    padding: 6px 10px; border-radius: 999px;
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(24,24,27,0.06);
+  }
+  .bg-ink ~ .corner-counter, .slide.bg-ink .corner-counter{
+    color: var(--ink-300);
+  }
+
+  /* ===== Live pulse dot ===== */
+  .pulse{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family: var(--sans); font-size: 12px; color: var(--ink-700);
+    font-weight: 500;
+  }
+  .pulse::before{
+    content:"";
+    width:8px; height:8px; border-radius:50%;
+    background: var(--brand-500);
+    box-shadow: 0 0 0 0 rgba(245,158,11,0.55);
+    animation: pulse 1.8s ease-out infinite;
+  }
+  @keyframes pulse{
+    0%{ box-shadow: 0 0 0 0 rgba(245,158,11,0.55); }
+    70%{ box-shadow: 0 0 0 14px rgba(245,158,11,0); }
+    100%{ box-shadow: 0 0 0 0 rgba(245,158,11,0); }
+  }
+
+  /* ===== Logomark ===== */
+  .logomark{
+    display:inline-flex; align-items:center; gap:12px;
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: clamp(18px,1.6vw,22px);
+    color: var(--ink-900);
+    letter-spacing: -0.01em;
+  }
+  .logomark .flower{
+    font-size: 1.4em;
+    line-height: 1;
+    filter: saturate(1.1);
+  }
+
+  /* ===== Stat cards ===== */
+  .stat-grid{
+    display:grid; grid-template-columns: 1fr 1fr; gap: 22px;
+    width: 100%; max-width: 1100px;
+  }
+  .stat-card{
+    padding: 32px 34px;
+    border-radius: 20px;
+    background: linear-gradient(180deg,#ffffff 0%, #fffaf0 100%);
+    border: 1px solid rgba(180,83,9,0.10);
+    box-shadow: var(--shadow-soft);
+    display:flex; flex-direction:column; gap:12px;
+    position:relative; overflow:hidden;
+  }
+  .stat-card .num{
+    font-family: var(--serif);
+    font-weight: 800;
+    font-size: clamp(48px, 6vw, 88px);
+    line-height: 1;
+    letter-spacing: -0.03em;
+  }
+  .stat-card .label{
+    font-family: var(--sans);
+    font-size: 15px;
+    color: var(--ink-700);
+    line-height: 1.45;
+  }
+  .stat-card .src{
+    margin-top: auto;
+    font-family: var(--sans);
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-weight: 600;
+    color: var(--ink-500);
+  }
+
+  /* ===== Animation: fade-up children when slide becomes active ===== */
+  .slide .fade-up{ opacity:0; transform: translateY(14px); transition: opacity .6s ease, transform .6s cubic-bezier(.2,.7,.2,1); }
+  .slide.active .fade-up{ opacity:1; transform:translateY(0); }
+  .slide.active .fade-up.d1{ transition-delay: .08s; }
+  .slide.active .fade-up.d2{ transition-delay: .18s; }
+  .slide.active .fade-up.d3{ transition-delay: .28s; }
+  .slide.active .fade-up.d4{ transition-delay: .38s; }
+  .slide.active .fade-up.d5{ transition-delay: .48s; }
+  .slide.active .fade-up.d6{ transition-delay: .58s; }
+
+  /* ===== Layouts ===== */
+  .row{ display:flex; gap: 28px; }
+  .col{ display:flex; flex-direction:column; gap: 18px; }
+  .center{ justify-content:center; align-items:center; text-align:center; }
+  .grow{ flex:1; }
+
+  /* ===== Slide-specific ===== */
+  /* Title slide */
+  #s1 .hero{
+    margin-top: auto; margin-bottom: auto;
+    text-align:center;
+    display:flex; flex-direction:column; align-items:center; gap: 28px;
+    z-index: 2; position: relative;
+  }
+  #s1 .headline{ max-width: 22ch; }
+  #s1 .meta{
+    display:flex; gap: 22px; align-items:center;
+    font-family: var(--sans); font-size: 13px; color: var(--ink-700);
+    letter-spacing: 0.04em;
+  }
+  #s1 .meta .sep{ width: 4px; height:4px; border-radius:50%; background: var(--ink-300); }
+
+  /* Pain */
+  #s2 .pain{ margin:auto; max-width: 22ch; text-align:center; }
+
+  /* Numbers */
+  #s3 .top{ display:flex; justify-content:space-between; align-items:flex-end; margin-bottom: 30px; }
+
+  /* Access gap */
+  .compare{
+    display:grid; grid-template-columns: 1fr 1fr; gap: 24px;
+    width: 100%; max-width: 1100px; margin: auto;
+  }
+  .compare .col-card{
+    padding: 36px;
+    border-radius: 22px;
+    background: #fff;
+    border: 1px solid rgba(24,24,27,0.06);
+    box-shadow: var(--shadow-soft);
+    min-height: 380px;
+    display:flex; flex-direction:column;
+  }
+  .compare .needs{ background: linear-gradient(180deg,#ffffff 0%, #fffaf0 100%); border-color: rgba(180,83,9,0.12); }
+  .compare .afford{ background: #fff; }
+  .needs h3, .afford h3{
+    font-family: var(--serif); font-weight:700; font-size: 28px; margin-bottom: 18px;
+  }
+  .needs ul, .afford ul{ list-style:none; display:flex; flex-direction:column; gap: 12px; }
+  .needs li{
+    display:flex; justify-content:space-between; align-items:baseline;
+    border-bottom: 1px dashed rgba(180,83,9,0.18);
+    padding: 10px 0;
+    color: var(--ink-700);
+    font-size: 16px;
+  }
+  .needs li .price{ font-family: var(--mono); font-weight: 500; color: var(--brand-700); }
+  .afford .zero{
+    font-family: var(--serif); font-weight:800;
+    font-size: clamp(120px, 18vw, 240px);
+    line-height: 1; margin: auto;
+    background: var(--grad-warm);
+    -webkit-background-clip: text; background-clip:text; -webkit-text-fill-color: transparent;
+  }
+  .afford .caption{ text-align:center; color: var(--ink-500); font-size: 14px; }
+
+  /* Insight */
+  #s5 .insight{ margin:auto; max-width: 28ch; text-align:center; }
+
+  /* Product mockup */
+  .browser{
+    width: 100%; max-width: 1100px; margin: 30px auto 0;
+    border-radius: 16px; overflow:hidden;
+    background: #fff;
+    box-shadow: var(--shadow-lift);
+    border: 1px solid rgba(24,24,27,0.08);
+  }
+  .browser .chrome{
+    display:flex; align-items:center; gap:8px;
+    padding: 12px 16px;
+    background: #f4f4f3;
+    border-bottom: 1px solid rgba(24,24,27,0.06);
+  }
+  .browser .chrome .dot{ width:11px; height:11px; border-radius:50%; }
+  .browser .chrome .red{ background:#ff5f57; }
+  .browser .chrome .ylw{ background:#febc2e; }
+  .browser .chrome .grn{ background:#28c840; }
+  .browser .chrome .url{
+    margin-left: 16px;
+    background: #fff; border: 1px solid rgba(24,24,27,0.08);
+    border-radius: 8px; padding: 6px 14px;
+    font-family: var(--mono); font-size: 12px; color: var(--ink-500);
+    flex: 1; max-width: 360px;
+  }
+  .browser .body{
+    padding: 36px 44px;
+    background: linear-gradient(180deg, #fffaf0 0%, #ffffff 100%);
+    min-height: 320px;
+    display:flex; flex-direction:column; gap: 22px;
+  }
+  .preset-row{ display:flex; gap: 14px; margin-top: 8px; flex-wrap:wrap; }
+  .preset-btn{
+    border-radius: 12px; padding: 14px 22px;
+    font-family: var(--sans); font-weight: 600; font-size: 15px;
+    cursor: pointer; border: 1px solid rgba(180,83,9,0.20);
+    background: linear-gradient(180deg,#fff 0%, #fef3c7 100%);
+    color: var(--brand-700);
+    box-shadow: 0 6px 14px -8px rgba(180,83,9,0.35);
+  }
+  .preset-btn.primary{
+    background: var(--grad-warm);
+    color: #fff;
+    border-color: transparent;
+  }
+  .runlog{
+    display:flex; flex-direction:column; gap: 8px;
+    font-family: var(--mono); font-size: 12.5px;
+    color: var(--ink-700);
+    background: #fafaf7;
+    border: 1px dashed rgba(24,24,27,0.10);
+    border-radius: 12px; padding: 16px;
+  }
+  .runlog .ok{ color: var(--success); }
+  .runlog .warn{ color: var(--warn); }
+
+  /* 5 Agents */
+  .agents{
+    display:grid; grid-template-columns: repeat(5, 1fr); gap: 18px;
+    width: 100%; margin-top: 28px;
+    position: relative;
+  }
+  .agents::before{
+    content:"";
+    position:absolute; top: 30px; left: 6%; right: 6%;
+    height: 3px;
+    background: var(--grad-warm);
+    border-radius: 999px;
+    opacity: 0.65;
+    z-index: 0;
+  }
+  .agent{
+    position:relative; z-index:1;
+    background: #fff;
+    border: 1px solid rgba(24,24,27,0.06);
+    border-radius: 18px;
+    padding: 22px 18px 20px;
+    box-shadow: var(--shadow-soft);
+    display:flex; flex-direction:column; gap: 10px;
+  }
+  .agent .num-bubble{
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: var(--grad-warm);
+    color: #fff;
+    font-family: var(--serif); font-weight: 700; font-size: 20px;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow: 0 8px 20px -8px rgba(217,119,6,0.55);
+    margin: -42px 0 6px;
+  }
+  .agent h4{
+    font-family: var(--serif); font-weight: 700; font-size: 18px;
+    color: var(--ink-900);
+  }
+  .agent p{
+    font-size: 13.5px; line-height: 1.5; color: var(--ink-700);
+  }
+  .agent .tools{
+    margin-top: auto;
+    font-family: var(--mono); font-size: 10.5px;
+    color: var(--brand-700);
+    letter-spacing: 0.02em;
+  }
+
+  /* Shock moment / BLOCK */
+  .block-card{
+    margin: auto;
+    max-width: 940px;
+    width: 100%;
+    border-radius: 22px;
+    padding: 44px 48px;
+    background:
+      radial-gradient(800px 360px at 50% -20%, rgba(185,28,28,0.22) 0%, transparent 60%),
+      #1a1212;
+    color: #fff;
+    border: 1px solid rgba(185,28,28,0.45);
+    box-shadow: 0 30px 80px -30px rgba(185,28,28,0.55), 0 0 0 1px rgba(185,28,28,0.30) inset;
+    position: relative;
+    overflow: hidden;
+    animation: redPulse 3.2s ease-in-out infinite;
+  }
+  @keyframes redPulse{
+    0%,100%{ box-shadow: 0 30px 80px -30px rgba(185,28,28,0.45), 0 0 0 1px rgba(185,28,28,0.30) inset; }
+    50%{ box-shadow: 0 30px 100px -20px rgba(185,28,28,0.75), 0 0 0 1px rgba(220,38,38,0.55) inset; }
+  }
+  .block-card .pill{
+    display:inline-flex; align-items:center; gap: 8px;
+    background: rgba(185,28,28,0.20);
+    border: 1px solid rgba(220,38,38,0.50);
+    color: #fecaca;
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.10em; text-transform: uppercase;
+  }
+  .block-card h2{
+    font-family: var(--serif); font-weight: 700;
+    font-size: clamp(32px, 4vw, 52px);
+    line-height: 1.05; margin-top: 18px;
+    color: #fff;
+  }
+  .block-card blockquote{
+    margin-top: 22px;
+    padding: 22px 26px;
+    background: rgba(255,255,255,0.04);
+    border-left: 3px solid #ef4444;
+    border-radius: 8px;
+    font-family: var(--serif); font-style: italic; font-weight: 500;
+    font-size: 18px; line-height: 1.55;
+    color: #fde68a;
+  }
+  .block-card .src-link{
+    display:inline-block; margin-top: 18px;
+    font-family: var(--mono); font-size: 12px;
+    color: #fcd34d; text-decoration: none;
+    border-bottom: 1px dashed rgba(252,211,77,0.5);
+    padding-bottom: 2px;
+  }
+
+  /* Proof / Jenny vs Jessica */
+  .proof{
+    display:grid; grid-template-columns: 1fr 1fr; gap: 24px;
+    width: 100%; max-width: 1150px; margin: 12px auto 0;
+  }
+  .persona{
+    border-radius: 20px;
+    padding: 28px 30px;
+    background: #fff;
+    border: 1px solid rgba(24,24,27,0.07);
+    box-shadow: var(--shadow-soft);
+    display:flex; flex-direction:column; gap: 14px;
+  }
+  .persona.blocked{
+    background: linear-gradient(180deg,#fff5f5 0%, #ffffff 100%);
+    border-color: rgba(185,28,28,0.20);
+  }
+  .persona.clean{
+    background: linear-gradient(180deg,#f0fdf4 0%, #ffffff 100%);
+    border-color: rgba(21,128,61,0.18);
+  }
+  .persona .name{
+    font-family: var(--serif); font-weight: 700; font-size: 26px;
+  }
+  .persona .meta{
+    font-family: var(--mono); font-size: 12px; color: var(--ink-500);
+  }
+  .persona .tag{
+    display:inline-flex; align-items:center; gap: 6px;
+    font-family: var(--sans); font-weight: 600; font-size: 12px;
+    padding: 6px 12px; border-radius: 999px;
+    width: fit-content;
+  }
+  .tag.danger{ background: #fee2e2; color: #991b1b; }
+  .tag.success{ background: #dcfce7; color: #15803d; }
+  .persona .steps{
+    display:flex; flex-direction:column; gap: 10px;
+    margin-top: 6px;
+  }
+  .persona .step{
+    display:flex; gap: 12px; align-items:flex-start;
+    font-size: 14px; color: var(--ink-700); line-height: 1.45;
+  }
+  .persona .step .dot{
+    width: 8px; height:8px; border-radius:50%;
+    margin-top: 7px; flex-shrink:0;
+  }
+  .blocked .dot{ background: #b91c1c; }
+  .clean .dot{ background: #15803d; }
+  .proof-caption{
+    max-width: 900px; margin: 24px auto 0; text-align:center;
+    color: var(--ink-700); font-size: 15px; line-height: 1.55;
+    font-style: italic; font-family: var(--serif);
+  }
+
+  /* Real vs Mocked table */
+  .integrity{
+    width:100%; max-width: 1150px; margin: 12px auto 0;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+  }
+  .integrity .col-box{
+    border-radius: 20px; padding: 26px 28px;
+    background: #fff;
+    border: 1px solid rgba(24,24,27,0.07);
+    box-shadow: var(--shadow-soft);
+  }
+  .integrity .real{ background: linear-gradient(180deg,#f0fdf4 0%, #ffffff 100%); border-color: rgba(21,128,61,0.18); }
+  .integrity .mock{ background: linear-gradient(180deg,#fffbeb 0%, #ffffff 100%); border-color: rgba(180,83,9,0.16); }
+  .integrity h3{
+    font-family: var(--serif); font-weight: 700; font-size: 22px;
+    margin-bottom: 6px;
+  }
+  .integrity .sub{ font-size: 12.5px; color: var(--ink-500); margin-bottom: 16px; }
+  .integrity ul{ list-style:none; display:flex; flex-direction:column; gap: 9px; }
+  .integrity li{
+    font-size: 13.5px; line-height: 1.4;
+    display:flex; gap: 10px; align-items:flex-start;
+    color: var(--ink-700);
+  }
+  .integrity li .mark{
+    font-family: var(--mono); font-size: 11px; font-weight: 600;
+    padding: 2px 6px; border-radius: 4px;
+    flex-shrink: 0; margin-top: 1px;
+  }
+  .real .mark{ background:#dcfce7; color:#15803d; }
+  .mock .mark{ background:#fef3c7; color:#b45309; }
+
+  /* Waterfall tree */
+  .tree-wrap{
+    margin: auto;
+    width:100%; max-width: 880px;
+    background: #0f0f12;
+    border-radius: 18px;
+    padding: 32px 38px;
+    border: 1px solid rgba(255,255,255,0.06);
+    box-shadow: var(--shadow-lift);
+    font-family: var(--mono);
+    color: #f4f4f3;
+    font-size: 15px; line-height: 1.9;
+  }
+  .tree-wrap .root{ color: var(--brand-500); font-weight: 500; }
+  .tree-wrap .child{ color: #f4f4f3; padding-left: 28px; position:relative; }
+  .tree-wrap .child::before{
+    content: ""; position:absolute; left: 6px; top: 0;
+    width: 14px; height: 100%;
+    border-left: 1px dashed rgba(252,211,77,0.35);
+  }
+  .tree-wrap .child .branch{
+    color: rgba(252,211,77,0.5);
+    margin-right: 8px;
+  }
+  .tree-wrap .duration{ color: var(--ink-300); font-size: 12px; margin-left: 10px; }
+
+  /* Sponsor grid */
+  .sponsors{
+    display:grid; grid-template-columns: repeat(3, 1fr); gap: 18px;
+    width:100%; max-width: 1100px; margin: 20px auto 0;
+  }
+  .sponsor{
+    padding: 22px;
+    border-radius: 16px;
+    background: #fff;
+    border: 1px solid rgba(24,24,27,0.06);
+    box-shadow: var(--shadow-soft);
+    display:flex; flex-direction:column; gap: 6px;
+  }
+  .sponsor .logo{
+    font-family: var(--serif); font-weight: 700; font-size: 19px;
+    color: var(--ink-900); letter-spacing: -0.01em;
+  }
+  .sponsor .role{
+    font-family: var(--sans); font-size: 12.5px;
+    color: var(--ink-700); line-height: 1.45;
+  }
+  .sponsor .tag-load{
+    margin-top: 6px;
+    font-family: var(--mono); font-size: 10px; color: var(--brand-700);
+    text-transform: uppercase; letter-spacing: 0.10em;
+  }
+
+  /* Next slide */
+  .vision-row{
+    display:grid; grid-template-columns: repeat(5, 1fr); gap: 14px;
+    width:100%; max-width: 1100px; margin: 30px auto 0;
+  }
+  .vision-card{
+    padding: 22px 18px;
+    border-radius: 16px;
+    background: linear-gradient(180deg,#ffffff 0%, #fffaf0 100%);
+    border: 1px solid rgba(180,83,9,0.10);
+    box-shadow: var(--shadow-soft);
+    text-align: center;
+  }
+  .vision-card .label{
+    font-family: var(--serif); font-weight: 700; font-size: 18px;
+    color: var(--ink-900);
+  }
+  .vision-card .sub{
+    margin-top: 6px;
+    font-size: 12.5px; color: var(--ink-700); line-height: 1.45;
+  }
+
+  /* Team slide */
+  .badge{
+    display:inline-flex; align-items:center; gap: 10px;
+    background: var(--grad-warm);
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-family: var(--sans); font-weight: 600; font-size: 14px;
+    box-shadow: 0 10px 24px -12px rgba(217,119,6,0.65);
+  }
+  .credit-row{
+    display:flex; gap: 30px; flex-wrap:wrap; margin-top: 24px;
+  }
+  .credit{
+    background: #fff;
+    border: 1px solid rgba(24,24,27,0.06);
+    border-radius: 16px;
+    padding: 20px 24px;
+    box-shadow: var(--shadow-soft);
+    display:flex; gap: 16px; align-items:center;
+  }
+  .credit .face{
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: var(--grad-warm);
+    display:flex; align-items:center; justify-content:center;
+    color: #fff; font-family: var(--serif); font-size: 22px; font-weight: 700;
+  }
+  .credit .label{ font-family: var(--serif); font-weight: 700; font-size: 17px; }
+  .credit .sub{ font-size: 12.5px; color: var(--ink-500); }
+
+  /* Ask slide */
+  #s15 .ask-wrap{
+    margin: auto;
+    display:flex; flex-direction:column; align-items:center; gap: 32px;
+    text-align:center;
+    z-index: 2; position:relative;
+  }
+  .cta-card{
+    margin-top: 14px;
+    padding: 26px 36px;
+    border-radius: 18px;
+    background: var(--grad-warm);
+    color: #fff;
+    box-shadow: 0 22px 50px -18px rgba(217,119,6,0.55);
+    display:flex; flex-direction:column; align-items:center; gap: 6px;
+  }
+  .cta-card .cta-label{
+    font-family: var(--serif); font-weight: 700; font-size: 24px;
+    letter-spacing: -0.01em;
+  }
+  .cta-card .cta-url{
+    font-family: var(--mono); font-size: 14px; color: rgba(255,255,255,0.85);
+  }
+
+  /* Helpers */
+  .h-fill{ flex: 1; display:flex; flex-direction:column; }
+  .stack-tight{ display:flex; flex-direction:column; gap: 12px; }
+  .between{ display:flex; justify-content:space-between; align-items:center; }
+  .topbar{ display:flex; justify-content:space-between; align-items:center; }
+
+  /* Print / fullscreen helpers — no print needed */
+
+  /* Smaller screen / fallback */
+  @media (max-width: 900px){
+    .agents{ grid-template-columns: 1fr 1fr; }
+    .agents::before{ display:none; }
+    .stat-grid, .compare, .proof, .integrity, .sponsors, .vision-row{ grid-template-columns: 1fr; }
+    .slide{ padding: 5vh 6vw; }
+  }
+</style>
+</head>
+<body>
+
+<div class="deck" id="deck">
+
+  <!-- ============ SLIDE 1 — TITLE ============ -->
+  <section class="slide bg-warm active" id="s1">
+    <div class="orb orb-amber" style="width:520px;height:520px;top:-120px;left:-120px;"></div>
+    <div class="orb orb-rose" style="width:480px;height:480px;bottom:-140px;right:-100px;"></div>
+    <div class="topbar fade-up">
+      <div class="logomark"><span class="flower">🌸</span> Mom's Saheli</div>
+      <div class="pulse">Live build · streaming</div>
+    </div>
+
+    <div class="hero">
+      <div class="eyebrow fade-up d1">Agent Forge AI Hackathon · Solo Build</div>
+      <h1 class="display display-xl headline fade-up d2">
+        The friend every working mom can <span class="italic grad-text">finally</span> afford.
+      </h1>
+      <p class="lead fade-up d3" style="max-width:54ch;">
+        A five-agent AI swarm that delivers two thousand dollars of consultant work — market research, legal compliance, marketing, launch — for free.
+      </p>
+      <div class="meta fade-up d4">
+        <span>San Francisco</span>
+        <span class="sep"></span>
+        <span>May 16, 2026</span>
+        <span class="sep"></span>
+        <span>Solo build · 24 hours</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 2 — THE WORLD'S PAIN ============ -->
+  <section class="slide bg-warm" id="s2">
+    <div class="orb orb-amber" style="width:520px;height:520px;top:-120px;right:-120px;"></div>
+    <div class="topbar fade-up">
+      <div class="eyebrow">01 · The world's pain</div>
+      <div class="logomark"><span class="flower">🌸</span> Mom's Saheli</div>
+    </div>
+
+    <div class="pain fade-up d1">
+      <h1 class="display display-lg">
+        She's not short on effort.<br/>
+        She's short on <span class="italic grad-text">margin</span>.
+      </h1>
+      <p class="lead fade-up d2" style="margin: 28px auto 0; max-width: 54ch;">
+        The single mother working two jobs doesn't need motivation. She needs the thing rich founders get for free — a team of specialists who tell her what's worth doing and what's illegal to try.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 3 — THE NUMBERS ============ -->
+  <section class="slide bg-warm" id="s3">
+    <div class="topbar fade-up">
+      <div class="eyebrow">02 · The numbers</div>
+      <div class="logomark"><span class="flower">🌸</span> Mom's Saheli</div>
+    </div>
+
+    <div class="top fade-up d1" style="margin-top: 22px;">
+      <h2 class="display display-md" style="max-width: 16ch;">Seven million women. One impossible math problem.</h2>
+    </div>
+
+    <div class="stat-grid fade-up d2" style="margin: 18px auto 0;">
+      <div class="stat-card">
+        <div class="num grad-text">7.3M</div>
+        <div class="label">Single moms in America raising kids on a single income.</div>
+        <div class="src">Source · Center for American Progress</div>
+      </div>
+      <div class="stat-card">
+        <div class="num grad-text">75%</div>
+        <div class="label">Are already working — most of them full-time. The effort isn't the problem.</div>
+        <div class="src">Source · Center for American Progress</div>
+      </div>
+      <div class="stat-card">
+        <div class="num grad-text">$40K</div>
+        <div class="label">Median annual income for a working single mom in the United States.</div>
+        <div class="src">Source · Center for American Progress</div>
+      </div>
+      <div class="stat-card">
+        <div class="num grad-text">35%</div>
+        <div class="label">Of that income is eaten by childcare alone — before rent, food, or transit.</div>
+        <div class="src">Source · Child Care Aware of America</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 4 — THE ACCESS GAP ============ -->
+  <section class="slide bg-warm" id="s4">
+    <div class="topbar fade-up">
+      <div class="eyebrow">03 · The access gap</div>
+      <div class="logomark"><span class="flower">🌸</span> Mom's Saheli</div>
+    </div>
+
+    <div class="fade-up d1" style="text-align:center; margin: 18px auto 6px;">
+      <h2 class="display display-md" style="max-width: 24ch; margin: 0 auto;">
+        What founders get for free, she can't get at all.
+      </h2>
+    </div>
+
+    <div class="compare fade-up d2" style="margin-top: 10px;">
+      <div class="col-card needs">
+        <h3>What she needs</h3>
+        <ul>
+          <li><span>Small-business consultant</span><span class="price">$2,000 / engagement</span></li>
+          <li><span>Lawyer (licensing &amp; compliance)</span><span class="price">$200 / hour</span></li>
+          <li><span>Marketing strategist</span><span class="price">$200 / hour</span></li>
+          <li><span>Bookkeeper / financial planner</span><span class="price">$200 / hour</span></li>
+          <li><span>Landing page &amp; launch help</span><span class="price">$1,500+</span></li>
+        </ul>
+      </div>
+      <div class="col-card afford">
+        <h3>What she can afford</h3>
+        <div class="zero">$0</div>
+        <div class="caption">After rent, food, and childcare — there is nothing left for advice.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 5 — THE INSIGHT ============ -->
+  <section class="slide bg-warm" id="s5">
+    <div class="orb orb-amber" style="width:560px;height:560px;top:-120px;left:-150px;"></div>
+    <div class="orb orb-rose" style="width:420px;height:420px;bottom:-100px;right:-80px;"></div>
+
+    <div class="topbar fade-up">
+      <div class="eyebrow">04 · The insight</div>
+      <div class="logomark"><span class="flower">🌸</span> Mom's Saheli</div>
+    </div>
+
+    <div class="insight">
+      <h1 class="display display-lg fade-up d1">
+        What if a <span class="italic grad-text">swarm</span> of AI specialists did all of it — for free?
+      </h1>
+      <p class="lead fade-up d2" style="margin: 28px auto 0; max-width: 56ch;">
+        Not generic "AI." A five-agent swarm where each agent has exactly one job, hands its output to the next, and the whole thing finishes before her coffee gets cold.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 6 — THE PRODUCT ============ -->
+  <section class="slide bg-warm" id="s6">
+    <div class="topbar fade-up">
+      <div class="eyebrow">05 · The product</div>
+      <div class="logomark"><span class="flower">🌸</span> Mom's Saheli</div>
+    </div>
+
+    <div class="fade-up d1" style="text-align:center; margin: 12px auto 0;">
+      <h2 class="display display-md" style="max-width: 30ch; margin: 0 auto;">
+        One screen. Two buttons. A full launch plan in under sixty seconds.
+      </h2>
+    </div>
+
+    <div class="browser fade-up d2">
+      <div class="chrome">
+        <span class="dot red"></span><span class="dot ylw"></span><span class="dot grn"></span>
+        <div class="url">momsaheli.com / run</div>
+      </div>
+      <div class="body">
+        <div class="between">
+          <div class="logomark"><span class="flower">🌸</span> Mom's Saheli</div>
+          <div class="pulse">Swarm idle · ready</div>
+        </div>
+        <div>
+          <div class="eyebrow" style="margin-bottom:8px;">Try a real persona</div>
+          <div class="preset-row">
+            <button class="preset-btn primary">Run Jenny &nbsp;→</button>
+            <button class="preset-btn">Run Jessica &nbsp;→</button>
+            <button class="preset-btn">Use my own profile</button>
+          </div>
+        </div>
+        <div class="runlog">
+          <div><span class="ok">●</span>&nbsp; profile_agent · normalized 14 fields · 312ms</div>
+          <div><span class="ok">●</span>&nbsp; market_scout · ranked 8 income paths · 4.1s</div>
+          <div><span class="warn">●</span>&nbsp; reality_compliance · 1 option BLOCKED (CA cottage food)</div>
+          <div><span class="ok">●</span>&nbsp; launch_agent · landing page published · 6.8s</div>
+          <div><span class="ok">●</span>&nbsp; memory_agent · trajectory persisted</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 7 — THE 5 AGENTS ============ -->
+  <section class="slide bg-warm" id="s7">
+    <div class="topbar fade-up">
+      <div class="eyebrow">06 · The swarm</div>
+      <div class="logomark"><span class="flower">🌸</span> Mom's Saheli</div>
+    </div>
+
+    <div class="fade-up d1" style="margin-top: 8px;">
+      <h2 class="display display-md">Five agents. One job each. Zero overlap.</h2>
+      <p class="lead" style="margin-top: 10px;">Every node in the chain is auditable, replayable, and individually testable.</p>
+    </div>
+
+    <div class="agents fade-up d2">
+      <div class="agent">
+        <div class="num-bubble">1</div>
+        <h4>Profile</h4>
+        <p>Normalizes her skills, hours, budget, and hard constraints into a typed schema.</p>
+        <div class="tools">Pydantic</div>
+      </div>
+      <div class="agent">
+        <div class="num-bubble">2</div>
+        <h4>Market Scout</h4>
+        <p>Ranks 6–10 realistic income paths by net monthly dollars she'd actually keep.</p>
+        <div class="tools">Gemini · Bright Data · Actionbook</div>
+      </div>
+      <div class="agent">
+        <div class="num-bubble">3</div>
+        <h4>Reality &amp; Compliance</h4>
+        <p>Blocks illegal options with cited state law — not vibes, not vague disclaimers.</p>
+        <div class="tools">Tavily · Bright Data</div>
+      </div>
+      <div class="agent">
+        <div class="num-bubble">4</div>
+        <h4>Launch</h4>
+        <p>Writes the offer, the 7-day plan, and publishes a real landing page she can share.</p>
+        <div class="tools">Gemini · Actionbook · Butterbase</div>
+      </div>
+      <div class="agent">
+        <div class="num-bubble">5</div>
+        <h4>Memory</h4>
+        <p>Persists the trajectory and surfaces cross-user patterns for the next mom.</p>
+        <div class="tools">Evermind</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 8 — THE SHOCK MOMENT ============ -->
+  <section class="slide bg-ink" id="s8">
+    <div class="topbar fade-up">
+      <div class="eyebrow">07 · The demo beat</div>
+      <div class="logomark" style="color:#fff;"><span class="flower">🌸</span> Mom's Saheli</div>
+    </div>
+
+    <div class="block-card fade-up d1">
+      <span class="pill">⚠ Compliance halt · live</span>
+      <h2>Jenny's #1 ranked option just got <span style="color:#fca5a5;">BLOCKED</span>.</h2>
+      <blockquote>
+        California Health &amp; Safety Code §114365 — direct sales of home-prepared meals require a Cottage Food Operator permit; meal-plan subscriptions are not permitted.
+      </blockquote>
+      <a class="src-link" href="https://www.cdph.ca.gov" target="_blank" rel="noopener">
+        Source · cdph.ca.gov →
+      </a>
+      <p style="margin-top: 22px; color:#e4e4e7; font-size:15px; line-height:1.55; max-width: 60ch;">
+        This is the moment a free generic chatbot would have shrugged. Our compliance agent cites the statute, halts the plan, and re-runs the swarm against legal options only.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 9 — PROOF (NOTHING HARDCODED) ============ -->
+  <section class="slide bg-warm" id="s9">
+    <div class="topbar fade-up">
+      <div class="eyebrow">08 · Proof — nothing is hardcoded</div>
+      <div class="logomark"><span class="flower">🌸</span> Mom's Saheli</div>
+    </div>
+
+    <div class="fade-up d1" style="text-align:center; margin: 6px auto 0;">
+      <h2 class="display display-md" style="max-width: 30ch; margin:0 auto;">
+        Same five agents. Wildly different output.
+      </h2>
+    </div>
+
+    <div class="proof fade-up d2">
+      <div class="persona blocked">
+        <div class="between">
+          <div>
+            <div class="name">Jenny</div>
+            <div class="meta">California · home meal-plans · $600/mo gap</div>
+          </div>
+          <span class="tag danger">BLOCKED → pivoted</span>
+        </div>
+        <div class="steps">
+          <div class="step"><span class="dot"></span><span>Market Scout ranks meal-plan subscriptions as #1 income path.</span></div>
+          <div class="step"><span class="dot"></span><span>Compliance Agent hits CA §114365 — meal-plan subs not permitted.</span></div>
+          <div class="step"><span class="dot"></span><span>Swarm re-runs against legal options; tutoring + cottage-food bakery wins.</span></div>
+          <div class="step"><span class="dot"></span><span>Launch Agent ships her a permitted, compliant offer she can sell tomorrow.</span></div>
+        </div>
+      </div>
+
+      <div class="persona clean">
+        <div class="between">
+          <div>
+            <div class="name">Jessica</div>
+            <div class="meta">Texas · digital-only services · $400/mo gap</div>
+          </div>
+          <span class="tag success">CLEAN LAUNCH</span>
+        </div>
+        <div class="steps">
+          <div class="step"><span class="dot"></span><span>Market Scout ranks freelance bookkeeping + Etsy printables as top two.</span></div>
+          <div class="step"><span class="dot"></span><span>Compliance Agent: zero state-law conflicts for digital deliverables.</span></div>
+          <div class="step"><span class="dot"></span><span>Launch Agent writes offer copy, 7-day promotion plan, publishes page.</span></div>
+          <div class="step"><span class="dot"></span><span>Memory persists pattern → next Texas mom inherits the playbook.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <p class="proof-caption fade-up d3">
+      It's the regulation, the constraints, and the math doing the work — not a hidden if-statement.
+    </p>
+  </section>
+
+  <!-- ============ SLIDE 10 — REAL vs MOCKED ============ -->
+  <section class="slide bg-warm" id="s10">
+    <div class="topbar fade-up">
+      <div class="eyebrow">09 · Real vs mocked — full honesty</div>
+      <div class="logomark"><span class="flower">🌸</span> Mom's Saheli</div>
+    </div>
+
+    <div class="fade-up d1" style="text-align:center; margin: 4px auto 0;">
+      <h2 class="display display-md" style="max-width: 32ch; margin:0 auto;">
+        We'd rather show you the seams than fake the demo.
+      </h2>
+    </div>
+
+    <div class="integrity fade-up d2">
+      <div class="col-box real">
+        <h3>Real &amp; load-bearing today</h3>
+        <div class="sub">Live in this build. Judges can hit them right now.</div>
+        <ul>
+          <li><span class="mark">LIVE</span><span>Gemini 2.5 Flash — every LLM call is a real API hit</span></li>
+          <li><span class="mark">LIVE</span><span>Tavily — live SERP returning real .gov citation URLs</span></li>
+          <li><span class="mark">LIVE</span><span>FastAPI SSE streaming the swarm's progress in real time</span></li>
+          <li><span class="mark">LIVE</span><span>Server-rendered launch pages (real HTML, real URLs)</span></li>
+          <li><span class="mark">LIVE</span><span>AgentField — 6-reasoner nested waterfall, fully traced</span></li>
+          <li><span class="mark">LIVE</span><span>Constraint math — deterministic Python, never an LLM hallucination</span></li>
+        </ul>
+      </div>
+      <div class="col-box mock">
+        <h3>Mocked with graceful fallback</h3>
+        <div class="sub">Activates the second the partner key lands. Same interface, swap one env var.</div>
+        <ul>
+          <li><span class="mark">SHIM</span><span>Bright Data zone — using Tavily as live fallback today</span></li>
+          <li><span class="mark">SHIM</span><span>Actionbook — orchestration shim wired through Gemini today</span></li>
+          <li><span class="mark">SHIM</span><span>Evermind — local JSON persistence today, ready to swap</span></li>
+          <li><span class="mark">SHIM</span><span>Butterbase — landing pages served from FastAPI today</span></li>
+          <li><span class="mark">SHIM</span><span>Qwen Cloud · Z.ai · TokenRouter — interface defined, awaiting credit</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 11 — NESTED WATERFALL ============ -->
+  <section class="slide bg-warm" id="s11">
+    <div class="topbar fade-up">
+      <div class="eyebrow">10 · Sponsor-genuine · AgentField waterfall</div>
+      <div class="logomark"><span class="flower">🌸</span> Mom's Saheli</div>
+    </div>
+
+    <div class="fade-up d1" style="text-align:center; margin: 6px auto 0;">
+      <h2 class="display display-md" style="max-width: 30ch; margin:0 auto;">
+        AgentField isn't a logo on the slide — it's actually orchestrating.
+      </h2>
+    </div>
+
+    <div class="tree-wrap fade-up d2">
+      <div class="root">run_full_swarm <span class="duration">▾ 12.4s · 6 reasoners</span></div>
+      <div class="child"><span class="branch">├─</span> profile_agent <span class="duration">312 ms · 1 reasoner</span></div>
+      <div class="child"><span class="branch">├─</span> market_scout <span class="duration">4.10 s · 2 reasoners (rank + score)</span></div>
+      <div class="child"><span class="branch">├─</span> reality_compliance_agent <span class="duration">2.85 s · 1 reasoner (cited)</span></div>
+      <div class="child"><span class="branch">├─</span> launch_agent <span class="duration">3.97 s · 1 reasoner + render</span></div>
+      <div class="child"><span class="branch">└─</span> memory_agent <span class="duration">1.16 s · persist + recall</span></div>
+    </div>
+
+    <p class="proof-caption fade-up d3" style="margin-top: 22px;">
+      Judges click any child node to see inputs, outputs, prompt, timings, and token cost. Every reasoner is its own contract — testable in isolation, replayable end-to-end.
+    </p>
+  </section>
+
+  <!-- ============ SLIDE 12 — SPONSOR STACK ============ -->
+  <section class="slide bg-warm" id="s12">
+    <div class="topbar fade-up">
+      <div class="eyebrow">11 · The sponsor stack</div>
+      <div class="logomark"><span class="flower">🌸</span> Mom's Saheli</div>
+    </div>
+
+    <div class="fade-up d1" style="text-align:center; margin: 8px auto 0;">
+      <h2 class="display display-md" style="max-width: 30ch; margin:0 auto;">
+        Every tool load-bearing — none cosmetic.
+      </h2>
+    </div>
+
+    <div class="sponsors fade-up d2">
+      <div class="sponsor">
+        <div class="logo">AgentField</div>
+        <div class="role">Orchestration + nested waterfall trace UI for every reasoner.</div>
+        <div class="tag-load">Load-bearing · live</div>
+      </div>
+      <div class="sponsor">
+        <div class="logo">Bright Data</div>
+        <div class="role">Live web + SERP retrieval for market and legal sources.</div>
+        <div class="tag-load">Wired · Tavily fallback today</div>
+      </div>
+      <div class="sponsor">
+        <div class="logo">Actionbook</div>
+        <div class="role">Action graph / tool-routing for multi-step plans.</div>
+        <div class="tag-load">Shim · ready to swap</div>
+      </div>
+      <div class="sponsor">
+        <div class="logo">Evermind</div>
+        <div class="role">Cross-session memory + trajectory persistence per user.</div>
+        <div class="tag-load">Shim · ready to swap</div>
+      </div>
+      <div class="sponsor">
+        <div class="logo">Butterbase</div>
+        <div class="role">Hosted landing pages so every mom ships a real URL.</div>
+        <div class="tag-load">Shim · FastAPI today</div>
+      </div>
+      <div class="sponsor">
+        <div class="logo">Qwen Cloud</div>
+        <div class="role">Alternate LLM provider for cost-sensitive reasoners.</div>
+        <div class="tag-load">Interface defined</div>
+      </div>
+      <div class="sponsor">
+        <div class="logo">Z.ai</div>
+        <div class="role">Specialty reasoning for compliance long-context tasks.</div>
+        <div class="tag-load">Interface defined</div>
+      </div>
+      <div class="sponsor">
+        <div class="logo">TokenRouter</div>
+        <div class="role">Smart routing across models by cost / latency / quality.</div>
+        <div class="tag-load">Interface defined</div>
+      </div>
+      <div class="sponsor">
+        <div class="logo">Zeabur</div>
+        <div class="role">One-click deploy target for the live judge demo.</div>
+        <div class="tag-load">Live</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 13 — WHAT'S NEXT ============ -->
+  <section class="slide bg-warm" id="s13">
+    <div class="topbar fade-up">
+      <div class="eyebrow">12 · What's next</div>
+      <div class="logomark"><span class="flower">🌸</span> Mom's Saheli</div>
+    </div>
+
+    <div class="fade-up d1" style="margin-top: 8px;">
+      <h2 class="display display-md" style="max-width: 22ch;">
+        Working moms first. Then everyone whose <span class="italic grad-text">margin</span> is too thin.
+      </h2>
+      <p class="lead" style="margin-top: 14px; max-width: 64ch;">
+        The same five-agent swarm — different regulations, same shock-of-reality. Replace one prompt and one statute corpus, and the system serves an entirely new constituency.
+      </p>
+    </div>
+
+    <div class="vision-row fade-up d2">
+      <div class="vision-card">
+        <div class="label">Working moms</div>
+        <div class="sub">Cottage-food law, childcare math, side-income paths.</div>
+      </div>
+      <div class="vision-card">
+        <div class="label">Veterans</div>
+        <div class="sub">VA benefits, SDVOSB certification, set-aside contracts.</div>
+      </div>
+      <div class="vision-card">
+        <div class="label">Returning citizens</div>
+        <div class="sub">License restrictions, ban-the-box, fair-chance employers.</div>
+      </div>
+      <div class="vision-card">
+        <div class="label">Students</div>
+        <div class="sub">F-1 work rules, OPT timelines, allowed income types.</div>
+      </div>
+      <div class="vision-card">
+        <div class="label">Gig workers</div>
+        <div class="sub">State classification law, 1099 thresholds, deductions.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 14 — THE TEAM + 24 HOURS ============ -->
+  <section class="slide bg-warm" id="s14">
+    <div class="topbar fade-up">
+      <div class="eyebrow">13 · The team · the timer</div>
+      <div class="logomark"><span class="flower">🌸</span> Mom's Saheli</div>
+    </div>
+
+    <div class="fade-up d1" style="margin-top: 14px;">
+      <span class="badge">⚡ Shipped in 24 hours</span>
+      <h2 class="display display-md" style="margin-top: 16px; max-width: 26ch;">
+        Solo build. Co-piloted by a puppy and a Claude.
+      </h2>
+      <p class="lead" style="margin-top: 12px; max-width: 60ch;">
+        One human, one day, five agents, fifteen sponsor integrations wired or shimmed. Open-source, MIT-licensed, and on GitHub the moment judging ends.
+      </p>
+    </div>
+
+    <div class="credit-row fade-up d2">
+      <div class="credit">
+        <div class="face">A</div>
+        <div>
+          <div class="label">Avi</div>
+          <div class="sub">Builder · solo · San Francisco</div>
+        </div>
+      </div>
+      <div class="credit">
+        <div class="face">🐶</div>
+        <div>
+          <div class="label">Code Puppy</div>
+          <div class="sub">CLI co-pilot · architecture &amp; scaffolding</div>
+        </div>
+      </div>
+      <div class="credit">
+        <div class="face">C</div>
+        <div>
+          <div class="label">Claude</div>
+          <div class="sub">Reasoning partner · prompts &amp; design polish</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 15 — THE ASK ============ -->
+  <section class="slide bg-warm" id="s15">
+    <div class="orb orb-amber" style="width:620px;height:620px;top:-160px;left:-160px;"></div>
+    <div class="orb orb-rose" style="width:520px;height:520px;bottom:-180px;right:-140px;"></div>
+
+    <div class="topbar fade-up">
+      <div class="eyebrow">14 · The ask</div>
+      <div class="logomark"><span class="flower">🌸</span> Mom's Saheli</div>
+    </div>
+
+    <div class="ask-wrap">
+      <h1 class="display display-xl fade-up d1" style="max-width: 16ch;">
+        Pick <span class="italic grad-text">us</span>.
+      </h1>
+      <p class="lead fade-up d2" style="max-width: 56ch;">
+        We're not shipping AI features. We're closing the margin gap — for the seven million women who do everything right and still come up short.
+      </p>
+      <p class="display display-md fade-up d3" style="max-width: 22ch;">
+        Mom's Saheli is the friend she can <span class="italic grad-text">finally</span> afford.
+      </p>
+
+      <div class="cta-card fade-up d4">
+        <div class="cta-label">Run Jenny &nbsp;→</div>
+        <div class="cta-url">momsaheli.com</div>
+      </div>
+
+      <div class="fade-up d5" style="display:flex; align-items:center; gap: 14px; margin-top: 20px; color: var(--ink-700); font-family: var(--serif); font-style: italic; font-size: 18px;">
+        <span class="flower" style="font-size: 28px;">🌸</span> Thank you.
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- Slide counter (top right) -->
+<div class="corner-counter" id="cornerCounter">01 / 15</div>
+
+<!-- Navigation chrome -->
+<div class="nav" role="navigation" aria-label="Slide navigation">
+  <button id="prevBtn" aria-label="Previous slide" title="Previous (←)">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+  </button>
+  <span class="counter" id="navCounter">1 / 15</span>
+  <button id="nextBtn" aria-label="Next slide" title="Next (→ or space)">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+  </button>
+  <button id="fsBtn" aria-label="Fullscreen" title="Fullscreen (F)">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9V5a2 2 0 0 1 2-2h4"/><path d="M21 9V5a2 2 0 0 0-2-2h-4"/><path d="M3 15v4a2 2 0 0 0 2 2h4"/><path d="M21 15v4a2 2 0 0 1-2 2h-4"/></svg>
+  </button>
+</div>
+
+<script>
+(function(){
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const navCounter = document.getElementById('navCounter');
+  const cornerCounter = document.getElementById('cornerCounter');
+  const prev = document.getElementById('prevBtn');
+  const next = document.getElementById('nextBtn');
+  const fs   = document.getElementById('fsBtn');
+  let i = 0;
+
+  function pad2(n){ return n < 10 ? '0' + n : '' + n; }
+
+  function show(n){
+    n = Math.max(0, Math.min(slides.length - 1, n));
+    if(n === i && slides[i].classList.contains('active')) return;
+    slides[i].classList.remove('active');
+    i = n;
+    slides[i].classList.add('active');
+    navCounter.textContent = (i + 1) + ' / ' + slides.length;
+    cornerCounter.textContent = pad2(i + 1) + ' / ' + pad2(slides.length);
+    // sync url hash
+    history.replaceState(null, '', '#' + (i + 1));
+  }
+
+  prev.addEventListener('click', () => show(i - 1));
+  next.addEventListener('click', () => show(i + 1));
+  fs.addEventListener('click', () => {
+    if(!document.fullscreenElement) document.documentElement.requestFullscreen();
+    else document.exitFullscreen();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if(e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown'){ e.preventDefault(); show(i + 1); }
+    else if(e.key === 'ArrowLeft' || e.key === 'PageUp'){ e.preventDefault(); show(i - 1); }
+    else if(e.key === 'Home'){ e.preventDefault(); show(0); }
+    else if(e.key === 'End'){ e.preventDefault(); show(slides.length - 1); }
+    else if(e.key === 'f' || e.key === 'F'){
+      if(!document.fullscreenElement) document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+    }
+  });
+
+  // Touch / swipe
+  let touchX = null;
+  document.addEventListener('touchstart', (e) => { touchX = e.touches[0].clientX; }, {passive:true});
+  document.addEventListener('touchend', (e) => {
+    if(touchX === null) return;
+    const dx = e.changedTouches[0].clientX - touchX;
+    if(Math.abs(dx) > 50){ dx < 0 ? show(i + 1) : show(i - 1); }
+    touchX = null;
+  });
+
+  // Deep link
+  const hash = parseInt(location.hash.replace('#',''), 10);
+  if(!isNaN(hash) && hash >= 1 && hash <= slides.length){ show(hash - 1); }
+  else { show(0); }
+})();
+</script>
+
+</body>
+</html>
