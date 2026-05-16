@@ -13,4 +13,5 @@ aiofiles>=23.0.0
 openai>=1.30.0
 google-generativeai>=0.8.0
 tavily-python>=0.7.0
+brightdata-sdk>=1.0.0
 agentfield>=0.1.0

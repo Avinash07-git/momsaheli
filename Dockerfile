@@ -1,5 +1,4 @@
-# ── Stage 1: build the React frontend ────────────────────────────────────
-FROM node:20-slim AS frontend-build
+FROM node:20-bookworm-slim AS frontend
 
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
@@ -7,26 +6,26 @@ RUN npm ci
 COPY frontend/ ./
 RUN npm run build
 
-# ── Stage 2: Python backend ──────────────────────────────────────────────
-FROM python:3.11-slim
+FROM python:3.11-slim AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    FRONTEND_DIST_DIR=/app/frontend_dist \
+    PORT=8000
 
 WORKDIR /app
 
-# Install deps
-COPY backend/requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy backend code
 COPY backend/ ./backend/
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -e ./backend
 
-# Copy built frontend from stage 1
-COPY --from=frontend-build /app/frontend/dist ./frontend/dist
+COPY --from=frontend /app/frontend/dist ./frontend_dist
 
-# Environment
-ENV FRONTEND_DIST=/app/frontend/dist
-ENV PYTHONPATH=/app/backend
-ENV PORT=8080
+WORKDIR /app/backend
+EXPOSE 8000
 
-EXPOSE 8080
-
-CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

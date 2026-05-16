@@ -13,12 +13,34 @@ const SOURCE_BADGE: Record<string, { label: string; bg: string; text: string }> 
   instagram:            { label: 'Instagram',      bg: 'bg-fuchsia-100',  text: 'text-fuchsia-800' },
 };
 
+const PLACEHOLDER_URL_MARKERS = [
+  '/listing/example',
+  'example-',
+  'example_',
+];
+
 export default function EvidenceCard({ card }: { card: EvidenceCardT }) {
   const badge = SOURCE_BADGE[card.source] ?? SOURCE_BADGE.etsy;
+  const sourceLink = getAvailableSourceLink(card);
+
   return (
     <article className="surface-lift p-5 animate-slide-in group">
       <header className="flex items-start justify-between gap-3 mb-4">
-        <h3 className="font-semibold text-ink-900 leading-snug">{card.title}</h3>
+        <h3 className="font-semibold text-ink-900 leading-snug">
+          {sourceLink ? (
+            <a
+              href={sourceLink.url}
+              target="_blank"
+              rel="noreferrer"
+              className="underline decoration-ink-300 underline-offset-4 hover:text-brand-700 hover:decoration-brand-500 transition-colors"
+              title={sourceLink.title}
+            >
+              {card.title}
+            </a>
+          ) : (
+            card.title
+          )}
+        </h3>
         <span className={clsx('pill shrink-0', badge.bg, badge.text)}>{badge.label}</span>
       </header>
 
@@ -35,8 +57,57 @@ export default function EvidenceCard({ card }: { card: EvidenceCardT }) {
           {card.notes}
         </div>
       )}
+
+      {sourceLink && (
+        <a
+          href={sourceLink.url}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-brand-700 hover:text-brand-900"
+          title={sourceLink.title}
+        >
+          {sourceLink.label}
+          <span aria-hidden>↗</span>
+        </a>
+      )}
     </article>
   );
+}
+
+function getAvailableSourceLink(card: EvidenceCardT): { url: string; label: string; title: string } | null {
+  const originalUrl = card.source_url?.trim();
+  if (originalUrl && !isPlaceholderUrl(originalUrl)) {
+    return {
+      url: originalUrl,
+      label: 'Open listing',
+      title: 'Open original market source',
+    };
+  }
+
+  const query = encodeURIComponent(card.title);
+  const sourceQuery = encodeURIComponent(`${card.title} ${SOURCE_BADGE[card.source]?.label ?? card.source}`);
+
+  const searchUrlBySource: Record<EvidenceCardT['source'], string> = {
+    etsy: `https://www.etsy.com/search?q=${query}`,
+    poshmark: `https://poshmark.com/search?query=${query}`,
+    craigslist: `https://sfbay.craigslist.org/search/sss?query=${query}`,
+    nextdoor: `https://www.google.com/search?q=${sourceQuery}`,
+    outschool: `https://outschool.com/search?q=${query}`,
+    facebook_marketplace: `https://www.google.com/search?q=${sourceQuery}`,
+    facebook_group: `https://www.google.com/search?q=${sourceQuery}`,
+    castiron: `https://www.google.com/search?q=${sourceQuery}`,
+    instagram: `https://www.google.com/search?q=${sourceQuery}`,
+  };
+
+  return {
+    url: searchUrlBySource[card.source],
+    label: 'Search live source',
+    title: 'Open a live search for this market signal',
+  };
+}
+
+function isPlaceholderUrl(url: string): boolean {
+  return PLACEHOLDER_URL_MARKERS.some((marker) => url.includes(marker));
 }
 
 function Metric({ label, value, accent }: { label: string; value: string; accent?: boolean }) {

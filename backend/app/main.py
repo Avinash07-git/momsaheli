@@ -50,6 +50,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ----- Optional bundled frontend -----
+def _resolve_frontend_dist_dir() -> Path | None:
+    configured = os.getenv("FRONTEND_DIST_DIR") or os.getenv("FRONTEND_DIST")
+    if configured:
+        return Path(configured).expanduser().resolve()
+
+    repo_root_dist = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+    return repo_root_dist if repo_root_dist.exists() else None
+
+
+FRONTEND_DIST_DIR = _resolve_frontend_dist_dir()
+FRONTEND_INDEX = FRONTEND_DIST_DIR / "index.html" if FRONTEND_DIST_DIR else None
+
+if FRONTEND_DIST_DIR and (FRONTEND_DIST_DIR / "assets").exists():
+    app.mount("/assets", StaticFiles(directory=str(FRONTEND_DIST_DIR / "assets")), name="frontend-assets")
+
 # ----- Jinja env for launch page template -----
 _jinja = Environment(
     loader=FileSystemLoader(str(settings.templates_dir)),
@@ -157,43 +173,27 @@ async def launch_page(slug: str) -> HTMLResponse:
     return HTMLResponse(html)
 
 
-# ----- Frontend static files (production) -----
-# In dev the Vite dev-server handles this. In production (Zeabur) we serve
-# the built frontend from frontend/dist/ which lives two directories up.
-_DIST = Path(os.environ.get(
-    "FRONTEND_DIST",
-    str(Path(__file__).resolve().parents[2] / "frontend" / "dist"),
-))
+# ----- Root -----
+@app.get("/", response_model=None)
+async def root():
+    if FRONTEND_INDEX and FRONTEND_INDEX.exists():
+        return FileResponse(FRONTEND_INDEX)
 
-if _DIST.exists():
-    # Serve /assets/* directly
-    _assets = _DIST / "assets"
-    if _assets.exists():
-        app.mount("/assets", StaticFiles(directory=str(_assets)), name="assets")
+    return JSONResponse({
+        "name": "Mom's Saheli",
+        "version": "0.1.0",
+        "tagline": "The friend she can't afford.",
+        "docs": "/docs",
+        "frontend": "http://localhost:5173",
+    })
 
-    @app.get("/vite.svg", include_in_schema=False)
-    async def vite_svg():
-        f = _DIST / "vite.svg"
-        return FileResponse(str(f)) if f.exists() else JSONResponse({}, status_code=404)
 
-    # SPA catch-all — serve index.html for every non-API route
-    @app.get("/{full_path:path}", include_in_schema=False)
-    async def spa_fallback(full_path: str):
-        # Let API / launch / health routes fall through (handled above)
-        _reserved = ("api/", "launch/", "health", "docs", "openapi.json")
-        if any(full_path.startswith(r) for r in _reserved):
-            raise HTTPException(404, "Not found")
-        index = _DIST / "index.html"
-        if index.exists():
-            return FileResponse(str(index))
-        raise HTTPException(404, "index.html not built")
-else:
-    # Dev-mode root — just a status JSON
-    @app.get("/")
-    async def root() -> JSONResponse:
-        return JSONResponse({
-            "name": "Mom's Saheli",
-            "version": "0.1.0",
-            "docs": "/docs",
-            "frontend": "http://localhost:5173 (run npm run dev)",
-        })
+@app.get("/{full_path:path}", include_in_schema=False)
+async def frontend_spa_fallback(full_path: str) -> FileResponse:
+    """Serve React routes from the bundled frontend without masking backend APIs."""
+    backend_paths = {"health", "docs", "redoc", "openapi.json"}
+    if full_path in backend_paths or full_path.startswith(("api/", "launch/")):
+        raise HTTPException(404, "Not found")
+    if FRONTEND_INDEX and FRONTEND_INDEX.exists():
+        return FileResponse(FRONTEND_INDEX)
+    raise HTTPException(404, "Frontend build not found")

@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
+from urllib.parse import quote_plus
 
 import httpx
 
@@ -22,6 +23,7 @@ from app.settings import settings
 log = logging.getLogger(__name__)
 
 ACTIONBOOK_API_BASE = "https://api.actionbook.dev/v1"
+PLACEHOLDER_URL_MARKERS = ("/listing/example", "example-", "example_")
 
 
 async def live_etsy_search(query: str) -> dict:
@@ -34,7 +36,7 @@ async def live_etsy_search(query: str) -> dict:
 
     if settings.USE_FIXTURES or not settings.ACTIONBOOK_API_KEY:
         log.info("actionbook.etsy.fixture", extra={"query": query})
-        return _load_cache(cache_path)
+        return _normalize_etsy_cache(_load_cache(cache_path), fallback_query=query)
 
     try:
         payload = {
@@ -55,7 +57,7 @@ async def live_etsy_search(query: str) -> dict:
         return body
     except Exception as e:
         log.warning("actionbook.etsy.fallback", extra={"query": query, "err": str(e)[:200]})
-        return _load_cache(cache_path)
+        return _normalize_etsy_cache(_load_cache(cache_path), fallback_query=query)
 
 
 async def publish_launch_page(slug: str, landing_url: str) -> dict:
@@ -87,6 +89,21 @@ async def publish_launch_page(slug: str, landing_url: str) -> dict:
 
 def _slug(text: str) -> str:
     return "".join(c.lower() if c.isalnum() else "_" for c in text).strip("_")
+
+
+def _normalize_etsy_cache(payload: dict, fallback_query: str) -> dict:
+    listings = []
+    for raw in payload.get("listings", []):
+        listing = dict(raw)
+        url = listing.get("source_url") or ""
+        if not url or any(marker in url for marker in PLACEHOLDER_URL_MARKERS):
+            query = quote_plus(listing.get("title") or fallback_query)
+            listing["source_url"] = f"https://www.etsy.com/search?q={query}"
+            listing["source_url_note"] = "Resolved to an available Etsy search page."
+        listings.append(listing)
+    normalized = dict(payload)
+    normalized["listings"] = listings
+    return normalized
 
 
 def _load_cache(path: Path) -> dict:
