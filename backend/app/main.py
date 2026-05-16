@@ -14,6 +14,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 from pathlib import Path
 from typing import Any
 
@@ -25,7 +26,7 @@ from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from sse_starlette.sse import EventSourceResponse
 
-from app.adapters import butterbase, evermind
+from app.adapters import butterbase, evermind, resend_email
 from app.agents.profile_agent import agent_execution_plan, profile_from_text
 from app.orchestrator import EVENT_BUS, SwarmRunner
 from app.settings import settings
@@ -89,6 +90,7 @@ async def health() -> dict[str, Any]:
             "evermind": bool(settings.EVERMIND_API_KEY),
             "butterbase": bool(settings.BUTTERBASE_API_KEY),
             "agentfield": bool(settings.AGENTFIELD_API_KEY),
+            "resend": bool(settings.RESEND_API_KEY),
         },
     }
 
@@ -189,6 +191,30 @@ async def launch_page(slug: str) -> HTMLResponse:
         published_at=record.get("published_at"),
     )
     return HTMLResponse(html)
+
+
+@app.post("/api/launch/{slug}/reserve")
+async def reserve_launch_spot(slug: str, payload: dict[str, Any]) -> dict[str, Any]:
+    email = str(payload.get("email") or "").strip().lower()
+    if not _looks_like_email(email):
+        raise HTTPException(400, "Enter a valid email address")
+
+    record = await butterbase.get_launch_page(slug)
+    if not record:
+        raise HTTPException(404, "Launch page not found")
+
+    await butterbase.save_launch_lead(slug=slug, email=email, record=record)
+    email_result = await resend_email.send_reservation_followup(slug=slug, customer_email=email, record=record)
+    return {
+        "ok": True,
+        "stored": True,
+        "email_sent": bool(email_result.get("sent")),
+        "message_id": email_result.get("message_id"),
+    }
+
+
+def _looks_like_email(value: str) -> bool:
+    return bool(re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", value))
 
 
 # ----- Root -----

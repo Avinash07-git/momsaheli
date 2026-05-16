@@ -22,6 +22,7 @@ dependencies = [
     "tavily-python>=0.7.0",         # Free SERP / web search (Bright Data stand-in)
     "brightdata-sdk>=1.0.0",        # Activates when BRIGHT_DATA_ZONE is configured
     "agentfield>=0.1.0",            # Sponsor orchestrator (hybrid wrap pending)
+    "resend>=2.0.0",
 ]
 
 [project.optional-dependencies]

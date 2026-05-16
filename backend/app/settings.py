@@ -38,6 +38,11 @@ class Settings(BaseSettings):
     BUTTERBASE_API_KEY: str = ""
     BUTTERBASE_PROJECT_ID: str = ""
 
+    # --- Landing page email follow-up ---
+    RESEND_API_KEY: str = ""
+    RESEND_FROM_EMAIL: str = "Mom's Saheli <onboarding@resend.dev>"
+    RESEND_OWNER_EMAIL: str = ""
+
     # --- Orchestration ---
     AGENTFIELD_API_KEY: str = ""
     AGENTFIELD_PROJECT: str = "moms-saheli"

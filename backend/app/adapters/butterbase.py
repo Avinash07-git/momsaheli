@@ -28,6 +28,7 @@ log = logging.getLogger(__name__)
 BUTTERBASE_MCP_URL = "https://api.butterbase.ai/mcp"
 _RUNS_TABLE = "saheli_runs"
 _PAGES_TABLE = "saheli_launch_pages"
+_LEADS_TABLE = "saheli_launch_leads"
 
 # Local mirror — survives process restarts within the demo.
 _LOCAL_DIR = Path(__file__).resolve().parent.parent / "_local_store"
@@ -35,6 +36,7 @@ _LOCAL_DIR.mkdir(exist_ok=True)
 _RUNS_FILE = _LOCAL_DIR / "runs.json"
 _PAGES_DIR = _LOCAL_DIR / "pages"
 _PAGES_DIR.mkdir(exist_ok=True)
+_LEADS_FILE = _LOCAL_DIR / "launch_leads.json"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -157,6 +159,35 @@ async def get_launch_page(slug: str) -> dict | None:
     return _read_page_locally(slug)
 
 
+async def save_launch_lead(slug: str, email: str, record: dict) -> bool:
+    """Persist a customer reservation before any email send is attempted.
+
+    The local write is the demo-safe source of truth. Butterbase is attempted
+    only when configured, so a sponsor API outage never drops a real lead.
+    """
+    lead = {
+        "slug": slug,
+        "email": email,
+        "offer_name": record.get("packet", {}).get("offer_name"),
+        "display_name": record.get("display_name"),
+        "created_at": datetime.utcnow().isoformat(),
+    }
+    _append_lead_locally(lead)
+
+    if not settings.BUTTERBASE_PROJECT_ID:
+        log.info("butterbase.lead.local_only", extra={"slug": slug})
+        return True
+
+    result = await _mcp_call("insert_row", {
+        "app_id": settings.BUTTERBASE_PROJECT_ID,
+        "table": _LEADS_TABLE,
+        "data": lead,
+    })
+    if result is not None:
+        log.info("butterbase.lead.ok", extra={"slug": slug})
+    return True
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Local mirror helpers
 # ─────────────────────────────────────────────────────────────────────────────
@@ -182,3 +213,15 @@ def _read_page_locally(slug: str) -> dict | None:
     if not p.exists():
         return None
     return json.loads(p.read_text())
+
+
+def _append_lead_locally(lead: dict) -> None:
+    leads = _read_local_leads()
+    leads.insert(0, lead)
+    _LEADS_FILE.write_text(json.dumps(leads, default=str, indent=2))
+
+
+def _read_local_leads() -> list[dict]:
+    if not _LEADS_FILE.exists():
+        return []
+    return json.loads(_LEADS_FILE.read_text())
