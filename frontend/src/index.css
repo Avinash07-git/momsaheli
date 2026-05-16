@@ -2,19 +2,168 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================================
+   BASE — global typography + body
+   ========================================================================= */
 @layer base {
-  html { font-family: 'Inter', system-ui, sans-serif; }
-  body { @apply bg-cream text-ink; -webkit-font-smoothing: antialiased; }
-  .serif { font-family: 'Fraunces', Georgia, serif; }
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    @apply bg-cream text-ink-900;
+    font-feature-settings: "cv11", "ss01", "ss03";
+  }
+  .font-serif, .serif {
+    font-family: 'Fraunces', Georgia, serif;
+    font-feature-settings: "ss01", "ss02";
+  }
+  .font-mono, code, pre {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  }
+  /* Selection */
+  ::selection {
+    @apply bg-brand-200 text-brand-900;
+  }
+  /* Cleaner focus ring */
+  :focus-visible {
+    @apply outline-none ring-2 ring-brand-400 ring-offset-2 ring-offset-cream rounded;
+  }
 }
 
+/* ============================================================================
+   COMPONENTS — reusable building blocks
+   ========================================================================= */
 @layer components {
-  .card { @apply bg-white rounded-xl border border-brand-100 shadow-sm; }
-  .card-hover { @apply hover:shadow-md hover:border-brand-300 transition-all; }
-  .btn-primary { @apply bg-brand-600 hover:bg-brand-700 text-white font-semibold px-6 py-3 rounded-lg shadow-md transition; }
-  .pill { @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold; }
-  .pill-idle { @apply bg-gray-100 text-gray-600; }
-  .pill-running { @apply bg-brand-100 text-brand-800 animate-pulse; }
-  .pill-done { @apply bg-green-100 text-green-800; }
-  .pill-error { @apply bg-red-100 text-red-800; }
+
+  /* --- Surfaces -------------------------------------------------------- */
+  .surface {
+    @apply bg-white rounded-2xl border border-ink-100 shadow-soft;
+  }
+  .surface-lift {
+    @apply surface transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lift hover:border-ink-200;
+  }
+  .surface-glass {
+    @apply rounded-2xl border border-white/60 bg-white/70 backdrop-blur-md shadow-soft;
+  }
+  .surface-console {
+    @apply rounded-2xl border border-ink-800 bg-ink-900 text-ink-100 shadow-lift;
+  }
+
+  /* Legacy aliases (keep old class names working during component migration) */
+  .card { @apply surface; }
+  .card-hover { @apply surface-lift; }
+
+  /* --- Eyebrow / kicker text ------------------------------------------ */
+  .eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-eyebrow text-brand-700;
+  }
+  .eyebrow-muted {
+    @apply text-[11px] font-semibold uppercase tracking-eyebrow text-ink-500;
+  }
+
+  /* --- Buttons --------------------------------------------------------- */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2;
+  }
+  .btn-primary {
+    @apply btn px-6 py-3 bg-ink-900 text-white shadow-lift hover:bg-ink-800 hover:shadow-hover active:scale-[0.98];
+  }
+  .btn-accent {
+    @apply btn px-6 py-3 text-ink-950 shadow-lift active:scale-[0.98]
+           bg-gradient-to-br from-brand-300 via-brand-400 to-brand-500
+           hover:from-brand-400 hover:via-brand-500 hover:to-brand-600 hover:shadow-glow-brand;
+  }
+  .btn-ghost {
+    @apply btn px-4 py-2 text-ink-700 hover:bg-ink-100 hover:text-ink-900;
+  }
+  .btn-outline {
+    @apply btn px-5 py-2.5 border border-ink-200 bg-white text-ink-800 hover:border-ink-400 hover:bg-ink-50;
+  }
+
+  /* --- Pills / tags ---------------------------------------------------- */
+  .pill {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold leading-none;
+  }
+  .pill-lg { @apply px-3 py-1.5 text-xs; }
+
+  .pill-neutral { @apply pill bg-ink-100 text-ink-700; }
+  .pill-brand   { @apply pill bg-brand-100 text-brand-800; }
+  .pill-success { @apply pill bg-emerald-100 text-emerald-800; }
+  .pill-danger  { @apply pill bg-red-100 text-red-800; }
+  .pill-warn    { @apply pill bg-amber-100 text-amber-900; }
+
+  /* Status pills (used in legacy timeline) */
+  .pill-idle    { @apply pill bg-ink-100 text-ink-500; }
+  .pill-running { @apply pill bg-brand-100 text-brand-800; }
+  .pill-done    { @apply pill bg-emerald-100 text-emerald-800; }
+  .pill-error   { @apply pill bg-red-100 text-red-800; }
+
+  /* --- Status dots ----------------------------------------------------- */
+  .status-dot {
+    @apply inline-block w-2 h-2 rounded-full;
+  }
+  .status-dot-live {
+    @apply status-dot bg-emerald-500;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
+    animation: pulseRing 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /* --- Dividers / section labels --------------------------------------- */
+  .section-label {
+    @apply flex items-center gap-3 text-xs font-semibold uppercase tracking-eyebrow text-ink-500;
+  }
+  .section-label::before,
+  .section-label::after {
+    content: "";
+    @apply flex-1 h-px bg-ink-200;
+  }
+
+  /* --- Number / data display ------------------------------------------ */
+  .data-num {
+    @apply font-serif font-bold tabular-nums;
+  }
+
+  /* --- Skeleton shimmer ------------------------------------------------ */
+  .skeleton {
+    background-image: linear-gradient(90deg, #f4f4f3 0%, #fafaf9 50%, #f4f4f3 100%);
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
+    @apply rounded-md;
+  }
+
+  /* --- Glow accents (for the run dashboard) --------------------------- */
+  .glow-amber-soft {
+    background-image: radial-gradient(ellipse at center, rgba(252, 211, 77, 0.18), transparent 65%);
+  }
+
+  /* --- Decorative gradient text -------------------------------------- */
+  .text-gradient-warm {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #b45309 0%, #d97706 35%, #f59e0b 100%);
+  }
+}
+
+/* ============================================================================
+   UTILITIES — scrollbar polish, scroll shadows
+   ========================================================================= */
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #d4d4d1 transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: #d4d4d1;
+    border-radius: 9999px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover { background-color: #a1a1a0; }
+
+  .mask-fade-b {
+    mask-image: linear-gradient(180deg, black 70%, transparent 100%);
+    -webkit-mask-image: linear-gradient(180deg, black 70%, transparent 100%);
+  }
 }
