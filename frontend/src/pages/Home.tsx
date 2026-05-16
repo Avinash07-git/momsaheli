@@ -17,7 +17,8 @@ const AGENTS = [
   { n: 2, name: 'Market Scout',         color: '#3b82f6', desc: 'Live Etsy + Bright Data: 6–10 ranked income paths, real evidence.' },
   { n: 3, name: 'Reality & Compliance', color: '#ef4444', desc: 'Blocks illegal paths with the actual cited state statute.' },
   { n: 4, name: 'Launch',               color: '#10b981', desc: 'Offer + copy + 7-day plan + a real published landing page.' },
-  { n: 5, name: 'Memory',               color: '#8b5cf6', desc: 'Persists trajectory, surfaces a cross-user pattern for the next mom.' },
+  { n: 5, name: 'Customer Activation',   color: '#059669', desc: 'Finds first customer paths, drafts outreach, and gates every action on approval.' },
+  { n: 6, name: 'Memory',               color: '#8b5cf6', desc: 'Persists trajectory, surfaces a cross-user pattern for the next mom.' },
 ];
 
 const PRESETS = [
@@ -89,7 +90,7 @@ export default function Home() {
               </div>
 
               <div className="flex flex-wrap gap-2">
-                {['5 AI agents', '9 sponsor tools', 'Cited regulations', 'Real launch pages'].map((f) => (
+                {['6 AI agents', '9 sponsor tools', 'Cited regulations', 'Real launch pages'].map((f) => (
                   <span key={f} className="px-3 py-1 rounded-full text-[11px] font-medium text-white/30 border border-white/[0.08]">
                     {f}
                   </span>
@@ -115,6 +116,7 @@ export default function Home() {
                     { agent: 'Market Scout',           status: 'done',    label: '6 income paths ranked',        dot: '#10b981' },
                     { agent: 'Reality & Compliance',   status: 'block',   label: '3 BLOCKs · CA H&S §114365',  dot: '#ef4444' },
                     { agent: 'Launch Agent',           status: 'running', label: 'generating offer + page…',    dot: '#6366f1' },
+                    { agent: 'Customer Activation',     status: 'idle',    label: 'awaiting first leads',        dot: '#059669' },
                     { agent: 'Memory Agent',           status: 'idle',    label: 'awaiting trajectory',         dot: '#3f3f46' },
                   ].map((row) => (
                     <div key={row.agent} className="flex items-center gap-3">
@@ -178,7 +180,7 @@ export default function Home() {
           {/* Connecting line + steps */}
           <div className="relative">
             <div className="hidden lg:block absolute top-7 left-7 right-7 h-px bg-[#e4e4e7]" />
-            <div className="grid lg:grid-cols-5 gap-8 lg:gap-4">
+            <div className="grid lg:grid-cols-6 gap-8 lg:gap-4">
               {AGENTS.map((a) => (
                 <div key={a.n} className="relative">
                   <div

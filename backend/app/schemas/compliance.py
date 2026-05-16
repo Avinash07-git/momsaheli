@@ -29,6 +29,8 @@ class ComplianceCheck(BaseModel):
         default=None,
         description="Full citation, e.g. 'California Health & Safety Code §113758 — Cottage Food Operations…'",
     )
+    legal_citation_live: bool = False
+    legal_citation_provider: str | None = None
     block_reason: str | None = Field(
         default=None,
         description="Human-readable summary shown in the UI",

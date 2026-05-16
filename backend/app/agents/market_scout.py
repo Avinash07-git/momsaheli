@@ -1,4 +1,4 @@
-"""Market Scout — gathers evidence (Actionbook + Bright Data) and ranks opportunities (Qwen)."""
+"""Market Scout — gathers evidence (Actionbook + Bright Data) and ranks opportunities."""
 from __future__ import annotations
 
 import asyncio
@@ -122,6 +122,27 @@ async def gather_revenue_benchmarks(profile: Profile) -> list[RevenueCitation]:
     return citations[:5]
 
 
+async def gather_community_compatibility(profile: Profile) -> list[RevenueCitation]:
+    """Use Bright Data to pull public Reddit/Quora/forum compatibility signals.
+
+    This is about fit, not lead generation: public discussion snippets can show
+    whether a side-gig shape looks realistic for parents, working moms, and the
+    profile's time/inventory/delivery constraints.
+    """
+    raw = await bright_data.search_community_compatibility(profile, limit=5)
+    citations: list[RevenueCitation] = []
+    for item in raw:
+        url = item.get("url")
+        if not url:
+            continue
+        citations.append(RevenueCitation(
+            url=str(url),
+            title=str(item.get("title") or url)[:160],
+            snippet=str(item.get("snippet") or "")[:280],
+        ))
+    return citations[:5]
+
+
 async def rank_opportunities(
     profile: Profile,
     cards: list[EvidenceCard],
@@ -149,10 +170,11 @@ async def rank_opportunities(
         "surfacing the high-paying option that ultimately gets BLOCKED is how the user sees "
         "the system protect her from financially-tempting but illegal paths."
         "\n\n"
-        "GROUND YOUR ESTIMATES: You will be given an array `revenue_benchmarks` of real "
-        "public web sources with revenue data for this persona's category. Use them to anchor "
-        "estimated_net_monthly_usd to realistic real-world numbers — DO NOT invent figures. "
-        "For each opportunity, pick the 1-2 most-relevant benchmark indexes and put them in "
+        "GROUND YOUR ESTIMATES AND FIT: You will be given an array `revenue_benchmarks` of real "
+        "public web sources, including revenue pages and public Reddit/Quora/forum compatibility "
+        "signals for this persona's category. Use them to anchor estimated_net_monthly_usd and "
+        "whether the idea fits a working mom's constraints — DO NOT invent figures. "
+        "For each opportunity, pick the 1-2 most-relevant source indexes and put them in "
         "the `revenue_citation_indexes` array. If no benchmark is relevant, leave the array empty."
         "\n\n"
         "Output strict JSON: {\"opportunities\": [{\"id\": str, \"title\": str, \"category\": "
@@ -197,15 +219,23 @@ async def rank_opportunities(
         # Fallback: heuristic ranking on net income alone (still attach citations if any)
         opps = []
         sorted_cards = sorted(cards[:6], key=lambda c: c.estimated_net_monthly_usd, reverse=True)
-        attach = revenue_citations[:1]  # 1 best citation per opportunity in fallback path
+        attach = revenue_citations[:2]  # best live public citations per opportunity in fallback path
         for i, c in enumerate(sorted_cards):
+            citation_note = (
+                f" Public compatibility data includes {attach[0].title}."
+                if attach
+                else ""
+            )
             opps.append(Opportunity(
                 id=f"opp_{i+1}",
                 title=c.title,
                 category=_guess_category(c.title),
                 evidence_card_ids=[c.id],
                 rank=i + 1,
-                rationale=f"Based on {c.source} comp at ${c.observed_price_usd}. {c.observed_volume_signal}.",
+                rationale=(
+                    f"Based on {c.source} comp at ${c.observed_price_usd}. "
+                    f"{c.observed_volume_signal}.{citation_note}"
+                ),
                 estimated_net_monthly_usd=c.estimated_net_monthly_usd,
                 requires_permit=_guess_requires_permit(c.title),
                 revenue_citations=attach,
@@ -240,14 +270,15 @@ async def run_market_scout(profile: Profile) -> tuple[list[EvidenceCard], list[O
     The benchmark fan-out kills the 'Gemini hallucinated the number' critique —
     every $/mo claim is now backed by a real public URL in each Opportunity.
     """
-    # Phase 1: kick off revenue-benchmark fetch in parallel with evidence gathering
+    # Phase 1: kick off live benchmark/community fetches in parallel with evidence gathering
     benchmark_task = asyncio.create_task(gather_revenue_benchmarks(profile))
+    community_task = asyncio.create_task(gather_community_compatibility(profile))
 
     cards: list[EvidenceCard] = []
     async for card in gather_evidence(profile):
         cards.append(card)
 
     # Phase 2: wait for benchmarks (already fired) and run the grounded ranking
-    revenue_citations = await benchmark_task
+    revenue_citations = (await benchmark_task) + (await community_task)
     opportunities = await rank_opportunities(profile, cards, revenue_citations)
     return cards, opportunities

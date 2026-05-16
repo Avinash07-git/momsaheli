@@ -14,6 +14,7 @@ interface Props {
 export default function ComplianceBlock({ check, opportunity }: Props) {
   const isBlock = check.verdict === 'BLOCK';
   const isWarn  = check.verdict === 'WARN';
+  const citationProvider = check.legal_citation_provider?.replace(/_/g, ' ') ?? 'fixture fallback';
 
   return (
     <article
@@ -78,7 +79,7 @@ export default function ComplianceBlock({ check, opportunity }: Props) {
             <div className="flex items-center gap-2 mb-2">
               <CitationIcon />
               <div className="text-[10px] uppercase tracking-eyebrow font-bold text-ink-700">
-                Cited law · scraped live via Bright Data
+                Cited law · {check.legal_citation_live ? `live via ${citationProvider}` : citationProvider}
               </div>
             </div>
             <p className="text-sm text-ink-800 leading-relaxed font-serif italic">

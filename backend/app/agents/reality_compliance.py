@@ -93,16 +93,18 @@ def _check_legal(
     opportunity: Opportunity,
     profile: Profile,
     law_data: dict | None,
-) -> tuple[bool, str | None, str | None, str | None]:
+) -> tuple[bool, str | None, str | None, str | None, bool, str | None]:
     """Check opportunity against the (already-fetched) state cottage-food data.
-    Returns (legal_passed, citation_url, citation_text, block_reason).
+    Returns (legal_passed, citation_url, citation_text, block_reason, citation_live, provider).
     """
     if opportunity.category != "food_local" or law_data is None:
-        return True, None, None, None
+        return True, None, None, None, False, None
 
     requires_permit = law_data.get("requires_permit_for_hot_food", True)
     citation_text = law_data.get("citation_text")
     citation_url = law_data.get("source_url")
+    citation_live = bool(law_data.get("live_scrape_ok"))
+    citation_provider = law_data.get("live_scrape_provider")
 
     title_l = opportunity.title.lower()
     is_potentially_hazardous = any(k in title_l for k in _TCS_MARKERS)
@@ -115,10 +117,11 @@ def _check_legal(
             f"BLOCKED under {profile.state} cottage-food law: this option qualifies as 'potentially hazardous food' "
             f"requiring a Class B Retail Food Facility permit ($300\u2013$700/yr + commercial kitchen inspection). "
             f"Daily prep also exceeds her {profile.hours_per_week_available} hr/wk constraint.",
+            citation_live,
+            citation_provider,
         )
 
-    return True, citation_url, citation_text, None
-    return True, citation_url, citation_text, None
+    return True, citation_url, citation_text, None, citation_live, citation_provider
 
 
 async def _check_dimension_irs(opp: Opportunity, profile: Profile) -> ComplianceDimension:
@@ -178,12 +181,18 @@ async def _check_dimension_platform_tos(opp: Opportunity, profile: Profile) -> C
 def _build_state_law_dimension(opp: Opportunity, law_data: dict | None, legal_passed: bool,
                                 cite_url: str | None, cite_text: str | None) -> ComplianceDimension:
     """Wrap the (already-fetched) state cottage-food check as a ComplianceDimension."""
+    provider = (law_data or {}).get("live_scrape_provider") or "fixture_fallback"
+    live = bool((law_data or {}).get("live_scrape_ok"))
     return ComplianceDimension(
         dimension="state_cottage_food",
         passed=legal_passed,
         citation_url=cite_url or (law_data or {}).get("source_url"),
         citation_text=cite_text or (law_data or {}).get("citation_text"),
-        note="Live state-law lookup via Tavily (.gov sources prioritized).",
+        note=(
+            f"Live state-law lookup via {provider} (.gov sources prioritized)."
+            if live
+            else "Fixture fallback state-law lookup; no live source used."
+        ),
     )
 
 
@@ -214,7 +223,14 @@ async def run_reality_compliance(
         constraint_passed, constraint_reasons = _check_constraints(opp, profile)
 
         # 2. State-law (already fetched once globally)
-        legal_passed, cite_url, cite_text, block_reason = _check_legal(opp, profile, law_data_cache)
+        (
+            legal_passed,
+            cite_url,
+            cite_text,
+            block_reason,
+            citation_live,
+            citation_provider,
+        ) = _check_legal(opp, profile, law_data_cache)
 
         # 3. PARALLEL fan-out of secondary compliance dimensions (real Tavily calls)
         irs_task = asyncio.create_task(_check_dimension_irs(opp, profile))
@@ -242,6 +258,8 @@ async def run_reality_compliance(
             legal_passed=legal_passed,
             legal_citation_source_url=cite_url,
             legal_citation_text=cite_text,
+            legal_citation_live=citation_live,
+            legal_citation_provider=citation_provider,
             block_reason=block_reason,
             dimensions=[state_dim, irs_dim, tos_dim],
         )

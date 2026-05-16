@@ -81,6 +81,8 @@ export interface EvidenceCard {
   actionbook_session_id?: string | null;
   actionbook_session_url?: string | null;
   actionbook_screenshot_url?: string | null;
+  live_scrape_ok?: boolean;
+  live_scrape_provider?: string | null;
 }
 
 export interface RevenueCitation {
@@ -117,6 +119,8 @@ export interface ComplianceCheck {
   legal_passed: boolean;
   legal_citation_source_url?: string | null;
   legal_citation_text?: string | null;
+  legal_citation_live?: boolean;
+  legal_citation_provider?: string | null;
   block_reason?: string | null;
   dimensions: ComplianceDimension[];
 }
