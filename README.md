@@ -114,6 +114,12 @@ momsaheli/
 ├── AGENTS.md                    # 👈 READ FIRST if you're an AI agent
 ├── README.md                    # this file
 ├── .env.example                 # template — copy to .env
+├── scripts/setup.sh             # one-command fresh-laptop setup
+├── docs/                        # design context (see docs/README.md)
+│   ├── ARCHITECTURE.md          #   the 5-agent diagram + sponsor mapping
+│   ├── NORTH_STAR.md            #   mission + what we say NO to
+│   ├── DEMO_SCRIPT.md           #   90-second stage pitch
+│   └── legacy/                  #   pre-build docs (tagged stale)
 ├── backend/
 │   ├── app/
 │   │   ├── main.py              # FastAPI app + SSE streaming

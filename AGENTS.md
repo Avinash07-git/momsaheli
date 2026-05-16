@@ -6,6 +6,36 @@
 
 ---
 
+## 0. 🚦 Session-resume snapshot (read THIS box first)
+
+**Last session ended:** 2026-05-16, end of Day 1.  
+**Backend running?** No (was running locally; restart with the command in §7).  
+**Frontend running?** No.  
+**Repo clean + pushed?** Yes — all changes on `main`.
+
+**What we shipped this session (commits b703d84 → 3bce0d5):**
+1. ✅ Real Gemini 2.5 Flash wired into LLM cascade (`google-generativeai` SDK, JSON mode)
+2. ✅ Real Tavily SERP wired as Bright Data stand-in (free 1000/mo tier)
+3. ✅ Cached state-law scrape per profile (Tavily calls 3 → 1)
+4. ✅ Parallel prefetch state-law with Gemini ranking (saves ~3s)
+5. ✅ Market Scout surfaces ALL opps (so the BLOCK moment fires on Daily Tiffin)
+6. ✅ Brain-transplant docs: this file + accurate README + scripts/setup.sh
+7. ✅ Folder cleanup: planning docs moved into `docs/` + `docs/legacy/`
+
+**Verified end-to-end:** Jenny run = 6 opps ranked by real Gemini, 3 BLOCKs with real 
+`.gov` citation URLs from Tavily, real Gemini-written launch page at 
+`/launch/jenny-jenny-s-weekend-family-dinners`. Total run time ~38s (real LLM latency).
+
+**👉 Exact next action when Avinash returns:** answer one of these 3 open decisions 
+(see §9). Leading candidates: **AgentField hybrid wrap** (lights up `:8080` dashboard, 
+low risk) and **`gemini-2.5-flash-lite` swap** (~38s → ~15s).
+
+**Tomorrow-morning booth runs:**
+- Bright Data → free Web Unlocker zone → set `BRIGHT_DATA_ZONE=` in `.env` → done
+- Qwen Cloud → grab key → paste into `.env` → cascade auto-promotes Qwen to primary
+
+---
+
 ## 1. What is Mom's Saheli?
 
 A multi-agent system that surfaces realistic side-income opportunities for working moms
@@ -114,6 +144,12 @@ frontend/src/
 ├── pages/Run.tsx            ← The "Run Jenny" screen
 ├── hooks/useAgentStream.ts  ← SSE consumer
 └── components/              ← Timeline, EvidenceCard, ComplianceCheck, etc.
+
+docs/                       ← Design context (see docs/README.md for the map)
+├── ARCHITECTURE.md          ← diagrams + sponsor mapping
+├── NORTH_STAR.md            ← mission, what we say NO to
+├── DEMO_SCRIPT.md           ← the 90-sec stage pitch
+└── legacy/                  ← pre-build docs, tagged "may have drifted"
 ```
 
 ---
@@ -125,29 +161,23 @@ frontend/src/
 git clone https://github.com/Avinash07-git/momsaheli.git
 cd momsaheli
 
-# 2. Copy env template, then paste keys (see section 8 for which keys exist)
-cp .env.example .env
+# 2. One-command setup (creates venv, installs all deps, copies .env.example)
+./scripts/setup.sh
+
+# 3. Edit .env and paste keys (see §8 for what currently exists)
 $EDITOR .env
 
-# 3. Backend
-cd backend
-uv venv
-source .venv/bin/activate
-uv pip install -e . \
-  --index-url https://pypi.ci.artifacts.walmart.com/artifactory/api/pypi/external-pypi/simple \
-  --allow-insecure-host pypi.ci.artifacts.walmart.com
-uvicorn app.main:app --port 8000 &
+# 4. Start backend (Terminal 1)
+cd backend && source .venv/bin/activate
+uvicorn app.main:app --port 8000
 
-# 4. Frontend (new terminal)
-cd ../frontend
-npm install
-npm run dev
+# 5. Start frontend (Terminal 2)
+cd frontend && npm run dev
 
-# 5. Open http://localhost:5173, click Run Jenny — watch the live swarm
+# 6. Open http://localhost:5173, click Run Jenny — watch the live swarm
 ```
 
-If `uv` isn't installed: `brew install uv` (mac) or see https://github.com/astral-sh/uv.
-Drop the Walmart `--index-url` flags if not on the Walmart network.
+If `uv` isn't installed: `brew install uv` (mac). `setup.sh` auto-detects Walmart network.
 
 ---
 
@@ -226,6 +256,7 @@ Asked at end of last session, timed out — pick these up when he's back:
 ## 12. Recent Commit History (read for context)
 
 ```
+3bce0d5  docs: brain-transplant repo state — AGENTS.md, accurate README, setup script
 189bfe1  perf: parallelize Tavily state-law fetch with Gemini ranking
 b703d84  feat(real-apis): Gemini 2.5 Flash + Tavily search are LIVE
 98abc37  fix(market-scout): Etsy is for digital only — route food to Castiron
