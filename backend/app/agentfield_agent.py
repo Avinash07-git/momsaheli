@@ -43,12 +43,17 @@ log = logging.getLogger("agentfield_agent")
 # This keeps `start.sh` from getting noisy stack traces during boot.
 # ──────────────────────────────────────────────────────────────────────────
 def _preflight_or_exit() -> None:
-    if not settings.AGENTFIELD_API_KEY:
-        log.warning("AGENTFIELD_API_KEY is empty — skipping AgentField agent startup.")
+    u = urlparse(settings.AGENTFIELD_CONTROL_PLANE_URL)
+    is_local_cp = u.hostname in ("localhost", "127.0.0.1", "0.0.0.0")
+
+    # API key only required for non-local control planes (cloud / shared).
+    # The locally-run `af server` happily accepts anonymous registration.
+    if not is_local_cp and not settings.AGENTFIELD_API_KEY:
+        log.warning("AGENTFIELD_API_KEY is empty for non-local CP — skipping AgentField agent startup.")
         log.warning("FastAPI demo path keeps working; just no dashboard waterfall.")
         sys.exit(0)
+
     try:
-        u = urlparse(settings.AGENTFIELD_CONTROL_PLANE_URL)
         ping = f"{u.scheme}://{u.netloc}/healthz"
         requests.get(ping, timeout=2)
     except Exception as e:  # noqa: BLE001 — we want a wide net here
