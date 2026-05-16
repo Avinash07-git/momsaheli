@@ -117,18 +117,20 @@ def _check_legal(
 
 
 async def run_reality_compliance(
-    opportunities: list[Opportunity], profile: Profile
+    opportunities: list[Opportunity],
+    profile: Profile,
+    pre_fetched_law: dict | None = None,
 ) -> AsyncIterator[ComplianceCheck]:
     """Yields one ComplianceCheck per opportunity, in rank order.
 
-    Optimization: We scrape the state law ONCE per profile (not per opportunity)
-    because all opportunities share the same state. Saves N-1 redundant Tavily/Bright Data calls.
+    Optimization 1: Scrape state law ONCE per profile (cached_law var).
+    Optimization 2: Accept `pre_fetched_law` so the orchestrator can launch
+      the Tavily/Bright Data fetch in parallel with Market Scout, hiding
+      the 3s scrape latency entirely inside the ~16s LLM ranking call.
     """
-    law_data_cache: dict | None = None
-    needs_law = any(
-        o.category == "food_local" for o in opportunities
-    )
-    if needs_law:
+    needs_law = any(o.category == "food_local" for o in opportunities)
+    law_data_cache: dict | None = pre_fetched_law
+    if needs_law and law_data_cache is None:
         log.info("reality_compliance.fetch_state_law", extra={"state": profile.state})
         law_data_cache = await bright_data.scrape_state_law(profile.state)
 

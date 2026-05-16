@@ -17,7 +17,7 @@ from collections import defaultdict
 from datetime import datetime
 from typing import Any, AsyncIterator
 
-from app.adapters import butterbase
+from app.adapters import butterbase, bright_data
 from app.agents import (
     run_launch_agent,
     run_market_scout,
@@ -82,7 +82,15 @@ class SwarmRunner:
             await self._emit("profile_ready", "profile", {"profile": profile.model_dump(mode="json")})
             await asyncio.sleep(0.3)
 
-            # --- 2. Market Scout ---
+            # --- 2. Market Scout + parallel state-law prefetch ---
+            # Kick off the (slower) state-law scrape in parallel with the (much slower)
+            # Gemini-powered Market Scout ranking. Both depend only on the profile.
+            law_prefetch_task: asyncio.Task | None = None
+            if profile.state:
+                law_prefetch_task = asyncio.create_task(
+                    bright_data.scrape_state_law(profile.state)
+                )
+
             cards, opportunities = await run_market_scout(profile)
             for c in cards:
                 await self._emit("evidence_card", "market_scout", {"card": c.model_dump(mode="json")})
@@ -95,10 +103,12 @@ class SwarmRunner:
             await asyncio.sleep(0.3)
 
             # --- 3. Reality & Compliance ---
+            # By the time we get here, the prefetch task has had ~16s of head-start.
+            pre_law = await law_prefetch_task if law_prefetch_task else None
             checks = []
             winner = None
             rejected = []
-            async for check in run_reality_compliance(opportunities, profile):
+            async for check in run_reality_compliance(opportunities, profile, pre_fetched_law=pre_law):
                 checks.append(check)
                 await self._emit("compliance_check", "reality_compliance", {"check": check.model_dump(mode="json")})
                 await asyncio.sleep(0.4)  # dramatic pause for BLOCKs
