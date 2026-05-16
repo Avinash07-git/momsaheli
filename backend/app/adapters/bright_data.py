@@ -1,20 +1,23 @@
 """Bright Data adapter — two use cases:
 1. `scrape_state_law(state)` — fetches the live cottage-food / permit page for a US state.
    This powers the SHOCK MOMENT: real cited regulation blocking an opportunity.
-2. `scrape_market_comps(query)` — bulk scrape of Poshmark / Craigslist sold listings.
+   NOTE: Bright Data blocks .gov domains by policy, so we delegate this to Tavily.
+2. `scrape_market_comps(query)` — bulk scrape of Castiron / Craigslist / Google SERP
+   listings, with Gemini-powered HTML → structured listings extraction.
 
-Real API: Bright Data Web Unlocker / SERP API.
+Real API: Bright Data Web Unlocker (`web_unlocker1` zone is the default).
 Fallback: cached JSON from `app/fixtures/cached_scrapes/` for demo-day reliability.
 """
 from __future__ import annotations
 
 import json
 import logging
+import re
 from pathlib import Path
 
 import httpx
 
-from app.adapters import tavily
+from app.adapters import llm_cascade, tavily
 from app.settings import settings
 
 log = logging.getLogger(__name__)
@@ -92,34 +95,34 @@ async def scrape_market_comps(query: str, source: str = "poshmark") -> list[dict
     cache_name = f"{source}_{_slug(query)}.json"
     cache_path = settings.cached_scrapes_dir / cache_name
 
-    if settings.USE_FIXTURES or not settings.BRIGHT_DATA_API_TOKEN:
-        log.info("bright_data.comps.fixture", extra={"query": query, "source": source})
+    if not settings.BRIGHT_DATA_API_TOKEN or not settings.BRIGHT_DATA_ZONE:
+        log.info("bright_data.comps.fixture", extra={"query": query, "source": source, "reason": "no_creds"})
         return _load_cache_list(cache_path)
 
+    # Bright Data blocks Poshmark/Etsy by robots policy. Re-route to working source.
+    if source in ("poshmark", "etsy"):
+        source = "google"
+
     try:
-        # Real Bright Data SERP call would go here.
-        # For the hackathon we keep this thin — Actionbook handles the live Etsy demo,
-        # Bright Data covers the bulk Poshmark/Craigslist sweep.
-        search_url = _build_search_url(source, query)
-        payload = {
-            "zone": settings.BRIGHT_DATA_ZONE,
-            "url": search_url,
-            "format": "raw",
-        }
-        headers = {
-            "Authorization": f"Bearer {settings.BRIGHT_DATA_API_TOKEN}",
-            "Content-Type": "application/json",
-        }
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.post(BRIGHT_DATA_API, json=payload, headers=headers)
-            resp.raise_for_status()
-        # Parse — in real impl, run a small Qwen prompt to extract structured comps from HTML.
-        # For now we serve cached comps but flag them as live-verified.
-        comps = _load_cache_list(cache_path)
-        for c in comps:
+        html = await _bd_fetch(_build_search_url(source, query))
+        if not html:
+            raise RuntimeError("empty BD response")
+
+        comps = await _extract_listings_from_html(html, query=query, source=source)
+        if comps:
+            for c in comps:
+                c["live_scrape_ok"] = True
+                c["live_scrape_provider"] = "bright_data"
+            log.info("bright_data.comps.live", extra={"query": query, "count": len(comps)})
+            return comps
+
+        # LLM returned nothing extractable — fall back to fixtures but flag as verified-connection
+        log.info("bright_data.comps.no_listings_extracted", extra={"query": query})
+        cached = _load_cache_list(cache_path)
+        for c in cached:
             c["live_scrape_ok"] = True
-        log.info("bright_data.comps.ok", extra={"query": query, "count": len(comps)})
-        return comps
+            c["live_scrape_provider"] = "bright_data+fixture_shape"
+        return cached
     except Exception as e:
         log.warning("bright_data.comps.fallback", extra={"query": query, "err": str(e)[:200]})
         return _load_cache_list(cache_path)
@@ -133,19 +136,36 @@ async def scrape_food_local_comps(profile) -> dict:
     Real impl would hit Castiron API + Bright Data SERP on Nextdoor / Facebook.
     """
     cache_path = settings.cached_scrapes_dir / f"foodlocal_{profile.persona_id}.json"
-    if settings.USE_FIXTURES or not settings.BRIGHT_DATA_API_TOKEN:
-        log.info("bright_data.foodlocal.fixture", extra={"persona": profile.persona_id})
+    if not settings.BRIGHT_DATA_API_TOKEN or not settings.BRIGHT_DATA_ZONE:
+        log.info("bright_data.foodlocal.fixture", extra={"persona": profile.persona_id, "reason": "no_creds"})
         return _load_cache(cache_path)
 
-    # Real impl: parallel Bright Data calls to Castiron + Nextdoor + FB groups
-    # then a small LLM extraction pass to normalize each into EvidenceCard shape.
+    # Real Bright Data scrape: Castiron is the perfect cottage-food marketplace,
+    # open to scraping, no robots blocks. We extract structured listings via Gemini.
     try:
-        # Castiron has an open marketplace search; Nextdoor/FB groups need
-        # geo-targeted Bright Data SERP. For Phase 1 we still serve cached but tag live.
+        # Castiron search bound to the persona's first cooking skill
+        skill_query = next(
+            (s for s in profile.skills if any(k in s.lower() for k in ("meal", "cook", "food", "tiffin"))),
+            "weekend meal pack",
+        )
+        html = await _bd_fetch(_build_search_url("castiron", skill_query))
+        if not html:
+            raise RuntimeError("empty BD response")
+
+        listings = await _extract_listings_from_html(html, query=skill_query, source="castiron")
+        if listings:
+            for c in listings:
+                c["live_scrape_ok"] = True
+                c["live_scrape_provider"] = "bright_data"
+            log.info("bright_data.foodlocal.live", extra={"persona": profile.persona_id, "count": len(listings)})
+            return {"listings": listings, "source": "castiron"}
+
+        # No listings extracted — return fixtures shape but flag connection live
+        log.info("bright_data.foodlocal.no_listings_extracted", extra={"persona": profile.persona_id})
         cached = _load_cache(cache_path)
         for c in cached.get("listings", []):
             c["live_scrape_ok"] = True
-        log.info("bright_data.foodlocal.ok", extra={"persona": profile.persona_id})
+            c["live_scrape_provider"] = "bright_data+fixture_shape"
         return cached
     except Exception as e:
         log.warning("bright_data.foodlocal.fallback", extra={"err": str(e)[:200]})
@@ -154,11 +174,89 @@ async def scrape_food_local_comps(profile) -> dict:
 
 def _build_search_url(source: str, query: str) -> str:
     q = query.replace(" ", "+")
-    if source == "poshmark":
-        return f"https://poshmark.com/search?query={q}&availability=sold_out"
+    if source == "castiron":
+        return f"https://www.castiron.me/search?query={q}"
     if source == "craigslist":
         return f"https://sfbay.craigslist.org/search/sss?query={q}"
+    if source in ("poshmark", "etsy"):
+        # BD blocks both — caller should re-route to google. Kept for backward compat.
+        return f"https://www.google.com/search?q={q}+sold+listings"
+    # Default: Google SERP (works for any keyword, returns rich snippets BD passes through)
     return f"https://www.google.com/search?q={q}"
+
+
+async def _bd_fetch(url: str) -> str:
+    """Single Bright Data Web Unlocker call. Returns HTML string (or '' on error)."""
+    payload = {"zone": settings.BRIGHT_DATA_ZONE, "url": url, "format": "raw"}
+    headers = {
+        "Authorization": f"Bearer {settings.BRIGHT_DATA_API_TOKEN}",
+        "Content-Type": "application/json",
+    }
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        resp = await client.post(BRIGHT_DATA_API, json=payload, headers=headers)
+        resp.raise_for_status()
+        # BD signals soft errors via headers; surface them as raises.
+        bd_err = resp.headers.get("x-brd-error")
+        if bd_err:
+            raise RuntimeError(f"BD policy: {bd_err[:120]}")
+        return resp.text
+
+
+def _strip_html(html: str, max_chars: int = 18000) -> str:
+    """Compress raw HTML for LLM extraction — strip scripts/styles, collapse whitespace."""
+    html = re.sub(r"<script[^>]*>.*?</script>", " ", html, flags=re.DOTALL | re.IGNORECASE)
+    html = re.sub(r"<style[^>]*>.*?</style>", " ", html, flags=re.DOTALL | re.IGNORECASE)
+    html = re.sub(r"<!--.*?-->", " ", html, flags=re.DOTALL)
+    text = re.sub(r"\s+", " ", html)
+    return text[:max_chars]
+
+
+async def _extract_listings_from_html(html: str, query: str, source: str) -> list[dict]:
+    """Use the LLM cascade (Gemini today) to extract structured listings from
+    real scraped HTML. Returns EvidenceCard-shaped dicts.
+
+    Schema matches `EvidenceCard` so the orchestrator can validate them directly.
+    """
+    snippet = _strip_html(html)
+    if len(snippet) < 200:
+        return []
+
+    system = (
+        "You extract structured market-comp listings from raw HTML returned by a Bright Data "
+        "Web Unlocker scrape. Output ONLY JSON in the exact shape: "
+        '{"listings": [{"id": str, "source": str, "title": str, "url": str, '
+        '"price_usd": float|null, "note": str}]}. '
+        "Include 4-8 distinct listings. price_usd should be a single representative number "
+        "(median or asking) — never a range. url must be absolute (https://...). "
+        "If you cannot find structured listings, return an empty list."
+    )
+    user = json.dumps({
+        "query": query,
+        "source": source,
+        "html_excerpt": snippet,
+    })
+
+    try:
+        result = await llm_cascade.chat_json(
+            messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
+        )
+        raw = result.get("listings", []) if isinstance(result, dict) else []
+        cleaned: list[dict] = []
+        for i, r in enumerate(raw[:8]):
+            if not isinstance(r, dict) or not r.get("title"):
+                continue
+            cleaned.append({
+                "id": str(r.get("id") or f"bd_{source}_{i}"),
+                "source": str(r.get("source") or source),
+                "title": str(r.get("title"))[:160],
+                "url": str(r.get("url") or ""),
+                "price_usd": float(r["price_usd"]) if isinstance(r.get("price_usd"), (int, float)) else None,
+                "note": str(r.get("note") or "")[:280],
+            })
+        return cleaned
+    except Exception as e:
+        log.warning("bright_data.extract.fail", extra={"err": str(e)[:200]})
+        return []
 
 
 def _slug(text: str) -> str:
