@@ -162,7 +162,7 @@ async def launch_page(slug: str) -> HTMLResponse:
 # the built frontend from frontend/dist/ which lives two directories up.
 _DIST = Path(os.environ.get(
     "FRONTEND_DIST",
-    str(Path(__file__).resolve().parents[3] / "frontend" / "dist"),
+    str(Path(__file__).resolve().parents[2] / "frontend" / "dist"),
 ))
 
 if _DIST.exists():
