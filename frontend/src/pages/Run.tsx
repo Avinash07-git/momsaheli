@@ -96,7 +96,7 @@ export default function Run() {
   const pattern       = useMemo<CrossUserPattern | null>(
     () => events.find((e) => e.type === 'memory_pattern')?.data.pattern ?? null, [events]);
   const gmailWatch    = useMemo<{ slug: string; live: boolean } | null>(
-    () => events.find((e) => e.type === 'gmail_watching')?.data ?? null, [events]);
+    () => (events.find((e) => e.type === 'gmail_watching')?.data ?? null) as { slug: string; live: boolean } | null, [events]);
 
   const winnerOpp = useMemo<Opportunity | null>(() => {
     const passing = checks.find((c) => c.verdict === 'PASS');
