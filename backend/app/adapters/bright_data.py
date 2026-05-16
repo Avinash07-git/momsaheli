@@ -267,7 +267,8 @@ async def search_community_compatibility(profile, limit: int = 5) -> list[dict]:
                 break
         if citations:
             log.info("bright_data.community_compatibility.live", extra={"count": len(citations)})
-        return _prioritize_citation_domains(citations)[:limit]
+        ordered = _prioritize_citation_domains(citations)[:limit]
+        return await _enrich_public_citations_with_pages(ordered, max_pages=min(2, limit))
     except Exception as e:
         log.warning("bright_data.community_compatibility.fallback", extra={"err": str(e)[:200]})
         return []
@@ -886,6 +887,55 @@ def _prioritize_citation_domains(citations: list[dict]) -> list[dict]:
             ordered.append(citation)
             used_urls.add(url)
     return ordered
+
+
+async def _enrich_public_citations_with_pages(citations: list[dict], max_pages: int) -> list[dict]:
+    """Fetch top public result pages through Bright Data when safe and accessible."""
+    enriched: list[dict] = []
+    for i, citation in enumerate(citations):
+        if i >= max_pages:
+            enriched.append(citation)
+            continue
+        url = str(citation.get("url") or "")
+        if not url or not _is_safe_public_url(url):
+            enriched.append(citation)
+            continue
+        try:
+            html = await _bd_fetch(url)
+            if len(html.strip()) < 500:
+                enriched.append(citation)
+                continue
+            excerpt = _best_community_page_excerpt(_html_to_text(html, max_chars=16000))
+            if excerpt:
+                citation = {
+                    **citation,
+                    "snippet": excerpt,
+                    "provider": "bright_data_page",
+                    "live_source": True,
+                }
+        except Exception as e:
+            log.debug("bright_data.community_page_enrich.skip", extra={"err": str(e)[:160]})
+        enriched.append(citation)
+    return enriched
+
+
+def _best_community_page_excerpt(text: str) -> str:
+    lower = text.lower()
+    if "please enable javascript" in lower or "something went wrong" in lower:
+        return ""
+    keywords = (
+        "meal prep", "customers", "pricing", "working mom", "single mom",
+        "side hustle", "make money", "parents", "demand", "business",
+        "printables", "canva",
+    )
+    candidates: list[str] = []
+    for keyword in keywords:
+        idx = lower.find(keyword)
+        if idx >= 0:
+            candidates.append(text[max(0, idx - 80): idx + 520])
+    if not candidates:
+        return ""
+    return _clean_text(max(candidates, key=len), 520)
 
 
 def _customer_lead_from_search_result(raw: dict, query: str, profile, opportunity, index: int) -> dict | None:
