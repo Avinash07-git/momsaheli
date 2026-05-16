@@ -1,0 +1,16 @@
+[build]
+build_command = """
+set -e
+# 1. Build the React frontend
+cd frontend
+npm ci
+npm run build
+cd ..
+# 2. Install backend Python deps
+cd backend
+pip install -e .
+cd ..
+"""
+
+[start]
+start_command = "cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT"

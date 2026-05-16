@@ -13,13 +13,15 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
 import structlog
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from sse_starlette.sse import EventSourceResponse
 
@@ -155,13 +157,43 @@ async def launch_page(slug: str) -> HTMLResponse:
     return HTMLResponse(html)
 
 
-# ----- Root -----
-@app.get("/")
-async def root() -> JSONResponse:
-    return JSONResponse({
-        "name": "Mom's Saheli",
-        "version": "0.1.0",
-        "tagline": "The friend she can't afford.",
-        "docs": "/docs",
-        "frontend": "http://localhost:5173",
-    })
+# ----- Frontend static files (production) -----
+# In dev the Vite dev-server handles this. In production (Zeabur) we serve
+# the built frontend from frontend/dist/ which lives two directories up.
+_DIST = Path(os.environ.get(
+    "FRONTEND_DIST",
+    str(Path(__file__).resolve().parents[3] / "frontend" / "dist"),
+))
+
+if _DIST.exists():
+    # Serve /assets/* directly
+    _assets = _DIST / "assets"
+    if _assets.exists():
+        app.mount("/assets", StaticFiles(directory=str(_assets)), name="assets")
+
+    @app.get("/vite.svg", include_in_schema=False)
+    async def vite_svg():
+        f = _DIST / "vite.svg"
+        return FileResponse(str(f)) if f.exists() else JSONResponse({}, status_code=404)
+
+    # SPA catch-all — serve index.html for every non-API route
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def spa_fallback(full_path: str):
+        # Let API / launch / health routes fall through (handled above)
+        _reserved = ("api/", "launch/", "health", "docs", "openapi.json")
+        if any(full_path.startswith(r) for r in _reserved):
+            raise HTTPException(404, "Not found")
+        index = _DIST / "index.html"
+        if index.exists():
+            return FileResponse(str(index))
+        raise HTTPException(404, "index.html not built")
+else:
+    # Dev-mode root — just a status JSON
+    @app.get("/")
+    async def root() -> JSONResponse:
+        return JSONResponse({
+            "name": "Mom's Saheli",
+            "version": "0.1.0",
+            "docs": "/docs",
+            "frontend": "http://localhost:5173 (run npm run dev)",
+        })

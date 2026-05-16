@@ -15,6 +15,7 @@ dependencies = [
     "tenacity>=8.2.3",
     "structlog>=24.1.0",
     "python-dotenv>=1.0.1",
+    "aiofiles>=23.0.0",
     "openai>=1.30.0",
     # --- Live integrations (added Phase 2) ---
     "google-generativeai>=0.8.0",   # Gemini 2.5 Flash via LLM cascade
