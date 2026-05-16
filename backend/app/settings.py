@@ -51,7 +51,7 @@ class Settings(BaseSettings):
     AGENTFIELD_CONTROL_PLANE_URL: str = "http://localhost:8080"
 
     # --- Runtime ---
-    APP_BASE_URL: str = "http://localhost:8000"
+    APP_BASE_URL: str = "https://memsaheli.zeabur.app"
     USE_FIXTURES: bool = True
     LOG_LEVEL: str = "INFO"
 
