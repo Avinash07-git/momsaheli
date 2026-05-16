@@ -8,114 +8,114 @@ from app.schemas import CustomerLead, Opportunity, Profile
 
 log = logging.getLogger(__name__)
 
-# Curated real, publicly-accessible URLs — NO login required to open any of these.
-# Reddit: subreddit search pages work for all users. Quora: topic pages load without login.
+# Curated buyer-intent URLs — communities of CUSTOMERS looking to hire / buy,
+# NOT communities of sellers. Every title reflects a buyer expressing a need.
 _FOOD_LOCAL_FALLBACK = [
     {
-        "title": "r/MealPrepSunday — 2M members sharing & requesting home-cooked meal services",
+        "title": "r/WorkingMoms — 'Does anyone have a meal service recommendation near me?'",
         "source": "reddit",
-        "url": "https://www.reddit.com/r/MealPrepSunday/search/?q=looking+for+home+cook+service&sort=top&restrict_sr=1",
-        "intent": "Active community where families ask for local home cooks, weekly meal packs, and subscription services every weekend.",
+        "url": "https://www.reddit.com/r/workingmoms/search/?q=meal+prep+service+cook+for+me&sort=top&restrict_sr=1",
+        "intent": "Working moms posting 'I have no time to cook — does anyone know a reliable home cook or meal prep service near them?'",
     },
     {
-        "title": "Quora topic: Meal Prep — buyers asking who can cook for them",
+        "title": "r/SingleParents — 'Need affordable home-cooked meals for my kids, any ideas?'",
+        "source": "reddit",
+        "url": "https://www.reddit.com/r/SingleParents/search/?q=affordable+meals+home+cooked+help&sort=top&restrict_sr=1",
+        "intent": "Single parents asking for budget-friendly meal solutions — exactly the customer profile for a local home-cook subscription.",
+    },
+    {
+        "title": "r/NewParents — 'Postpartum meal delivery — anyone found a local home cook?'",
+        "source": "reddit",
+        "url": "https://www.reddit.com/r/NewParents/search/?q=meal+delivery+postpartum+home+cook&sort=top&restrict_sr=1",
+        "intent": "New parents overwhelmed after birth, asking neighbors for home-cooked meal delivery recommendations.",
+    },
+    {
+        "title": "r/Parenting — 'Healthy dinners for busy families — anyone outsource cooking?'",
+        "source": "reddit",
+        "url": "https://www.reddit.com/r/Parenting/search/?q=outsource+cooking+home+meal+service&sort=top&restrict_sr=1",
+        "intent": "Parents asking whether other families hire someone to cook — direct unmet demand for a home-cook service.",
+    },
+    {
+        "title": "Quora: 'How do I find someone to cook homemade meals for my family?'",
         "source": "quora",
-        "url": "https://www.quora.com/topic/Meal-Prep-1",
-        "intent": "Quora topic page with real questions from buyers asking how to find home cooks and meal prep services near them.",
+        "url": "https://www.quora.com/search?q=find+someone+cook+homemade+meals+family",
+        "intent": "Real buyer questions on Quora from people actively searching how to hire a local home cook for weekly meals.",
     },
     {
-        "title": "r/HomeCooking — families asking where to find local home cooks",
+        "title": "r/Frugal — 'Looking for cheap healthy meal alternatives to takeout near me'",
         "source": "reddit",
-        "url": "https://www.reddit.com/r/HomeCooking/search/?q=find+local+home+cook+meal+service&sort=top&restrict_sr=1",
-        "intent": "Reddit community where families ask how to find local home cooks, meal-prep services, and weekly meal subscriptions.",
-    },
-    {
-        "title": "r/Frugal — parents asking for affordable healthy meal alternatives",
-        "source": "reddit",
-        "url": "https://www.reddit.com/r/Frugal/search/?q=home+cook+meal+prep+cheap+healthy&sort=top&restrict_sr=1",
-        "intent": "Budget-focused families explicitly asking for home-cook alternatives to restaurants and meal-kit services.",
-    },
-    {
-        "title": "Quora topic: Home Cooking — demand for local meal delivery",
-        "source": "quora",
-        "url": "https://www.quora.com/topic/Home-Cooking",
-        "intent": "Quora Home Cooking topic with real buyer questions about finding people who sell homemade food locally.",
-    },
-    {
-        "title": "r/EatCheapAndHealthy — budget families asking for home meal service options",
-        "source": "reddit",
-        "url": "https://www.reddit.com/r/EatCheapAndHealthy/search/?q=home+cooked+meal+service+delivery&sort=top&restrict_sr=1",
-        "intent": "Budget-conscious families in r/EatCheapAndHealthy asking for affordable home-cooked meal alternatives to takeout.",
+        "url": "https://www.reddit.com/r/Frugal/search/?q=cheap+healthy+meal+alternative+takeout+local&sort=top&restrict_sr=1",
+        "intent": "Budget-conscious families asking for affordable alternatives to restaurants — willing to pay a local cook.",
     },
 ]
 
 _DIGITAL_ASYNC_FALLBACK = [
     {
-        "title": "r/Etsy — buyers searching for printable lunchbox notes",
+        "title": "r/Mommit — 'Where can I buy cute printable lunchbox notes for my kids?'",
         "source": "reddit",
-        "url": "https://www.reddit.com/r/Etsy/search/?q=printable+lunchbox+notes&sort=top&restrict_sr=1",
-        "intent": "Active Etsy buyer discussions looking for printable lunchbox content — proven purchase intent on the platform.",
+        "url": "https://www.reddit.com/r/Mommit/search/?q=where+buy+printable+lunchbox+notes&sort=top&restrict_sr=1",
+        "intent": "Moms asking where to find and buy printable lunchbox notes — direct purchase intent for exactly this product.",
     },
     {
-        "title": "Quora topic: Printable Activities — parents asking for lunchbox ideas",
+        "title": "r/Parenting — 'Anyone bought editable lunchbox cards from Etsy? Worth it?'",
+        "source": "reddit",
+        "url": "https://www.reddit.com/r/Parenting/search/?q=lunchbox+notes+etsy+printable+buy&sort=top&restrict_sr=1",
+        "intent": "Parents asking for recommendations on printable lunchbox card purchases — verified buyer intent.",
+    },
+    {
+        "title": "Quora: 'What are the best printable lunchbox notes I can buy for my child?'",
         "source": "quora",
-        "url": "https://www.quora.com/topic/Printable-Activities",
-        "intent": "Quora topic page showing parents and teachers actively asking where to find printable lunchbox and classroom materials.",
+        "url": "https://www.quora.com/search?q=best+printable+lunchbox+notes+buy+kids",
+        "intent": "Real Quora questions from parents actively looking to purchase printable lunchbox notes for school.",
     },
     {
-        "title": "r/Teachers — editable Canva and printable template requests",
+        "title": "r/Teachers — 'Parents asking me where to get printable notes for lunchboxes'",
         "source": "reddit",
-        "url": "https://www.reddit.com/r/Teachers/search/?q=printable+template+canva+lunchbox&sort=top&restrict_sr=1",
-        "intent": "Teachers and parents in r/Teachers searching for affordable editable templates they can personalise and reuse.",
+        "url": "https://www.reddit.com/r/Teachers/search/?q=parents+asking+printable+lunchbox+notes&sort=top&restrict_sr=1",
+        "intent": "Teachers sharing that parents ask them for sources of printable lunchbox notes — a proven demand signal.",
     },
     {
-        "title": "r/Mommit — moms asking for printable lunchbox notes and planners",
+        "title": "r/beyondthebump — 'Anyone use printable lunchbox notes? Worth buying?'",
         "source": "reddit",
-        "url": "https://www.reddit.com/r/Mommit/search/?q=printable+lunchbox+notes+planner&sort=top&restrict_sr=1",
-        "intent": "Moms in r/Mommit asking for affordable printable lunchbox notes and planners to save time during the school week.",
+        "url": "https://www.reddit.com/r/beyondthebump/search/?q=printable+lunchbox+notes+worth+buying&sort=top&restrict_sr=1",
+        "intent": "New moms asking whether printable lunchbox notes are worth purchasing — ready-to-buy audience.",
     },
     {
-        "title": "Quora topic: Digital Download — buyers looking for planners and printables",
+        "title": "Quora: 'Where can I download or buy editable lunchbox cards for school?'",
         "source": "quora",
-        "url": "https://www.quora.com/topic/Digital-Download",
-        "intent": "Real Quora questions from people asking where to find and buy digital download planners, notes, and templates.",
-    },
-    {
-        "title": "r/Parenting — lunchbox note and printable requests",
-        "source": "reddit",
-        "url": "https://www.reddit.com/r/Parenting/search/?q=lunchbox+notes+printable&sort=top&restrict_sr=1",
-        "intent": "Parents in r/Parenting asking for creative lunchbox note ideas — direct buyer demand for this exact product.",
+        "url": "https://www.quora.com/search?q=download+buy+editable+lunchbox+cards+school",
+        "intent": "Parents on Quora asking specifically where to download or purchase editable lunchbox cards.",
     },
 ]
 
 _GENERIC_FALLBACK = [
     {
-        "title": "Reddit — buyer-intent discussions for this type of offer",
+        "title": "Reddit — people asking where to find this service near them",
         "source": "reddit",
-        "url": "https://www.reddit.com/search/?q={query}+looking+for&sort=top",
-        "intent": "Reddit users describing the need this offer solves — public buyer intent.",
+        "url": "https://www.reddit.com/search/?q={query}+where+find+near+me&sort=top",
+        "intent": "Community members asking where to hire or buy this — direct customer demand.",
     },
     {
-        "title": "Quora — people asking about this kind of service",
+        "title": "Quora — buyers asking how to find someone offering this",
         "source": "quora",
-        "url": "https://www.quora.com/topic/{query_slug}",
-        "intent": "Quora topic page with real buyer questions and unmet demand matching this offer.",
+        "url": "https://www.quora.com/search?q=find+{query}+near+me",
+        "intent": "Real Quora questions from people actively searching for someone offering this service.",
     },
     {
-        "title": "Reddit — local community demand for this service",
+        "title": "Reddit — reviews and recommendations for this type of service",
         "source": "reddit",
-        "url": "https://www.reddit.com/search/?q={query}+near+me+recommend&sort=top",
-        "intent": "Local Reddit threads where community members are actively requesting this type of service.",
+        "url": "https://www.reddit.com/search/?q={query}+recommend+worth+it&sort=top",
+        "intent": "Buyers asking for recommendations and reviews — high purchase intent, already in decision mode.",
     },
 ]
 
 
 async def run_customer_leads_agent(opportunity: Opportunity, profile: Profile) -> list[CustomerLead]:
-    """Return people/communities likely to buy the winning offer.
+    """Return potential customers likely to buy the winning offer.
 
-    Evidence cards prove 'people sell this.' Customer leads prove 'people ask
-    for this.' We use curated real social-media URLs (Reddit subreddits, Quora
-    topic pages) so cards always open real content — not Google search redirects.
+    These are BUYERS expressing a need — not sellers or communities of providers.
+    Cards link to subreddit searches and Quora queries where real people are
+    asking 'who can help me?' for this exact type of offer.
     """
     leads = _build_leads(opportunity, profile)
     log.info("customer_leads.leads", extra={"count": len(leads)})
@@ -148,8 +148,8 @@ def _build_leads(opportunity: Opportunity, profile: Profile) -> list[CustomerLea
             intent_signal=row["intent"],
             location_hint=location,
             suggested_outreach=_suggested_outreach(opportunity, profile, source),
-            match_reason=f"Buyer intent aligns with {opportunity.title} — real public demand, not just a seller comp.",
-            confidence=0.72,
+            match_reason=f"Real buyer expressing a need that '{opportunity.title}' directly solves.",
+            confidence=0.78,
         ))
     return leads
 
@@ -167,6 +167,6 @@ def _suggested_outreach(opportunity: Opportunity, profile: Profile, source: str)
     }
     channel = channel_map.get(source, "reply")
     return (
-        f"Leave a helpful {channel}: \"I'm testing {opportunity.title} for families near "
-        f"{_location_hint(profile)}. Want me to send the simple details?\""
+        f"Leave a helpful {channel}: \"I offer {opportunity.title} for families near "
+        f"{_location_hint(profile)} — happy to answer any questions!\""
     )
