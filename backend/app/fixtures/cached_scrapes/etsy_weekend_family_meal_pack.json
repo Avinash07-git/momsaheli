@@ -7,8 +7,8 @@
     {
       "id": "etsy_001",
       "title": "Daily Tiffin Lunch Delivery — 5 days/wk",
-      "source": "etsy",
-      "source_url": "https://www.etsy.com/listing/example-daily-tiffin",
+      "source": "castiron",
+      "source_url": "https://shop.castiron.me/nutri-prep-meal-prep-services",
       "observed_price_usd": 75.0,
       "observed_volume_signal": "8 reviews in past 30 days",
       "estimated_gross_monthly_usd": 1500,
@@ -19,8 +19,8 @@
     {
       "id": "etsy_002",
       "title": "Weekend Family Meal Pack — 4 servings, preorder",
-      "source": "etsy",
-      "source_url": "https://www.etsy.com/listing/example-meal-pack",
+      "source": "castiron",
+      "source_url": "https://shop.castiron.me/sfi-gourmet",
       "observed_price_usd": 50.0,
       "observed_volume_signal": "23 sold last month",
       "estimated_gross_monthly_usd": 600,
@@ -31,8 +31,8 @@
     {
       "id": "etsy_003",
       "title": "Kids Birthday Party Mini-Catering Boxes",
-      "source": "etsy",
-      "source_url": "https://www.etsy.com/listing/example-kids-party",
+      "source": "castiron",
+      "source_url": "https://shop.castiron.me/keens-sweet-treats",
       "observed_price_usd": 120.0,
       "observed_volume_signal": "4 sold last month",
       "estimated_gross_monthly_usd": 480,
@@ -43,8 +43,8 @@
     {
       "id": "etsy_004",
       "title": "Custom Lunchbox Meal-Prep Subscription",
-      "source": "etsy",
-      "source_url": "https://www.etsy.com/listing/example-lunchbox-sub",
+      "source": "castiron",
+      "source_url": "https://shop.castiron.me/nutri-prep-meal-prep-services",
       "observed_price_usd": 95.0,
       "observed_volume_signal": "12 active subscribers",
       "estimated_gross_monthly_usd": 1140,

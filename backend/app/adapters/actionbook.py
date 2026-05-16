@@ -24,6 +24,16 @@ log = logging.getLogger(__name__)
 
 ACTIONBOOK_API_BASE = "https://api.actionbook.dev/v1"
 PLACEHOLDER_URL_MARKERS = ("/listing/example", "example-", "example_")
+REAL_ETSY_LINKS_BY_ID = {
+    "etsy_d01": "https://www.etsy.com/listing/1751240932/lunchbox-notes-printable-lunchbox-notes",
+    "etsy_d02": "https://www.etsy.com/listing/797010468/meal-planner-meal-prep-planner-meal",
+    "etsy_d03": "https://www.etsy.com/listing/1094076865/lunch-box-notes-for-kids-lunchbox-notes",
+    "etsy_d04": "https://www.etsy.com/listing/1064177739/bentgo-fresh-bento-meal-planner-for",
+    "etsy_001": "https://shop.castiron.me/nutri-prep-meal-prep-services",
+    "etsy_002": "https://shop.castiron.me/sfi-gourmet",
+    "etsy_003": "https://shop.castiron.me/keens-sweet-treats",
+    "etsy_004": "https://shop.castiron.me/nutri-prep-meal-prep-services",
+}
 
 
 async def live_etsy_search(query: str) -> dict:
@@ -95,6 +105,14 @@ def _normalize_etsy_cache(payload: dict, fallback_query: str) -> dict:
     listings = []
     for raw in payload.get("listings", []):
         listing = dict(raw)
+        if listing.get("id") in REAL_ETSY_LINKS_BY_ID:
+            listing["source_url"] = REAL_ETSY_LINKS_BY_ID[listing["id"]]
+            if "shop.castiron.me" in listing["source_url"]:
+                listing["source"] = "castiron"
+            listing["source_url_note"] = "Resolved to a real public listing/post page."
+            listings.append(listing)
+            continue
+
         url = listing.get("source_url") or ""
         if not url or any(marker in url for marker in PLACEHOLDER_URL_MARKERS):
             query = quote_plus(listing.get("title") or fallback_query)

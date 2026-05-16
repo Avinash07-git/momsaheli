@@ -13,6 +13,7 @@ SourceType = Literal[
     "facebook_group",  # local home-chef + community groups
     "castiron",        # cottage-food marketplace
     "instagram",       # home-chef DM commerce
+    "reddit",          # public community posts / demand validation
 ]
 
 

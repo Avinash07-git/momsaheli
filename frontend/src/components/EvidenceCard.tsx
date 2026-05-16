@@ -11,6 +11,7 @@ const SOURCE_BADGE: Record<string, { label: string; bg: string; text: string }> 
   facebook_group:       { label: 'FB Group',       bg: 'bg-blue-100',     text: 'text-blue-800' },
   castiron:             { label: 'Castiron',       bg: 'bg-amber-100',    text: 'text-amber-900' },
   instagram:            { label: 'Instagram',      bg: 'bg-fuchsia-100',  text: 'text-fuchsia-800' },
+  reddit:               { label: 'Reddit',         bg: 'bg-orange-100',   text: 'text-orange-800' },
 };
 
 const PLACEHOLDER_URL_MARKERS = [
@@ -98,6 +99,7 @@ function getAvailableSourceLink(card: EvidenceCardT): { url: string; label: stri
     facebook_group: `https://www.google.com/search?q=${sourceQuery}`,
     castiron: `https://www.google.com/search?q=${sourceQuery}`,
     instagram: `https://www.google.com/search?q=${sourceQuery}`,
+    reddit: `https://www.reddit.com/search/?q=${query}`,
   };
 
   return {

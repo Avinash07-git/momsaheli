@@ -42,7 +42,8 @@ export interface EvidenceCard {
     | 'facebook_marketplace'
     | 'facebook_group'
     | 'castiron'
-    | 'instagram';
+    | 'instagram'
+    | 'reddit';
   source_url: string;
   observed_price_usd: number;
   observed_volume_signal: string;

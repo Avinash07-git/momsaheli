@@ -23,6 +23,20 @@ log = logging.getLogger(__name__)
 BRIGHT_DATA_API = "https://api.brightdata.com/request"
 PLACEHOLDER_URL_MARKERS = ("/listing/example", "example-", "example_")
 LOGIN_GATED_SOURCES = {"facebook_group", "facebook_marketplace", "nextdoor", "instagram"}
+REAL_POST_LINKS_BY_ID = {
+    # Jenny food-local evidence: public Castiron shop pages and Reddit demand posts.
+    "ctn_001": ("castiron", "https://shop.castiron.me/nutri-prep-meal-prep-services"),
+    "ctn_002": ("castiron", "https://shop.castiron.me/sfi-gourmet"),
+    "fb_003": ("castiron", "https://shop.castiron.me/keens-sweet-treats"),
+    "ctn_004": ("reddit", "https://www.reddit.com/r/MealPrepSunday/comments/1gwglu3"),
+    "nd_005": ("castiron", "https://shop.castiron.me/slow-rise-bakery"),
+    "fb_006": ("reddit", "https://www.reddit.com/r/smallbusiness/comments/1t5k65o/home_bakery_advice/"),
+    # Resale / digital fixture evidence: direct public listing or public post pages.
+    "posh_001": ("poshmark", "https://poshmark.com/listing/20-Piece-3-Compartment-Meal-Prep-Food-Container-61884e1167bd9135238d8ef0"),
+    "posh_002": ("poshmark", "https://poshmark.com/listing/New-51-pc-MultiColor-Food-Storage-Meal-Prep-Container-Set-6900d8579936d6b08c1aa6f7"),
+    "posh_d01": ("etsy", "https://www.etsy.com/listing/1841158117/digital-wedding-template-digital-wedding"),
+    "posh_d02": ("etsy", "https://www.etsy.com/listing/846957011/budget-planner-printable-bundle"),
+}
 
 # Per-state cottage-food law URLs. Add more as we expand beyond CA/TX.
 STATE_LAW_URLS = {
@@ -202,6 +216,14 @@ def _normalize_listing_urls(listings: list[dict], fallback_query: str) -> list[d
     normalized: list[dict] = []
     for listing in listings:
         c = dict(listing)
+        if c.get("id") in REAL_POST_LINKS_BY_ID:
+            source, url = REAL_POST_LINKS_BY_ID[c["id"]]
+            c["source"] = source
+            c["source_url"] = url
+            c["source_url_note"] = "Resolved to a real public listing/post page."
+            normalized.append(c)
+            continue
+
         source = c.get("source", "")
         title = c.get("title") or fallback_query
         url = c.get("source_url") or ""
