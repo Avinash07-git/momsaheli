@@ -211,7 +211,7 @@ async def search_customer_leads(profile, opportunity, limit: int = 6) -> list[di
     if settings.BRIGHT_DATA_API_TOKEN and settings.BRIGHT_DATA_ZONE and not settings.USE_FIXTURES:
         try:
             leads: list[dict] = []
-            for query in demand_queries:
+            for query in demand_queries[:10]:
                 html = await _bd_fetch(_build_recent_search_url(query))
                 if not html:
                     continue
@@ -846,6 +846,15 @@ def _recent_customer_post_queries(profile, opportunity) -> list[str]:
     skills = " ".join(getattr(profile, "skills", []) or []).lower()
 
     if category == "food_local" or any(k in f"{skills} {title}".lower() for k in ("meal", "food", "cook", "tiffin")):
+        exact_intent_terms = [
+            '"looking for someone to cook for me"',
+            '"looking for someone to cook for my family"',
+            '"need someone to cook for me"',
+            '"need someone to cook for my family"',
+            '"someone to meal prep for me"',
+            '"in-home meal prep help"',
+            '"personal chef recommendation"',
+        ]
         need_terms = [
             '"meal prep"',
             '"family dinner"',
@@ -863,7 +872,12 @@ def _recent_customer_post_queries(profile, opportunity) -> list[str]:
     local = f'"{city}" "{state}"'.strip() if city or state else geo
     base_need = need_terms[0]
     second_need = need_terms[1] if len(need_terms) > 1 else need_terms[0]
-    return [
+    queries: list[str] = []
+    if "exact_intent_terms" in locals():
+        queries.extend(f'{local} {term}'.strip() for term in exact_intent_terms)
+        queries.extend(f'site:reddit.com "{city}" {term}'.strip() for term in exact_intent_terms[:4])
+        queries.extend(f'site:facebook.com/groups "{city}" {term}'.strip() for term in exact_intent_terms[:4])
+    queries.extend([
         f'{local} {intent_terms[0]} {base_need} parents'.strip(),
         f'"{city}" {base_need} {intent_terms[1]} parents'.strip(),
         f'site:reddit.com "{city}" {base_need} {intent_terms[1]} parents'.strip(),
@@ -871,7 +885,8 @@ def _recent_customer_post_queries(profile, opportunity) -> list[str]:
         f'"{city}" {intent_terms[3] if len(intent_terms) > 3 else intent_terms[1]} {second_need} moms'.strip(),
         f'site:craigslist.org "{city}" {base_need} wanted help'.strip(),
         f'"{city}" public forum {second_need} {intent_terms[1]} families'.strip(),
-    ]
+    ])
+    return [query for query in queries if query]
 
 
 def _community_compatibility_queries(profile) -> list[str]:
@@ -1199,6 +1214,9 @@ def _looks_like_public_demand(text: str) -> bool:
         "looking for", "recommend", "recommendation", "need ", "needs ",
         "anyone know", "iso ", "in search of", "where can i find",
         "who makes", "help with", "ideas for", "what do you use",
+        "someone to cook", "cook for me", "cook for my family",
+        "meal prep for me", "meal prep help", "in-home meal prep",
+        "personal chef recommendation",
     )
     customer_markers = (
         "parent", "parents", "mom", "moms", "family", "families", "kids",
@@ -1261,7 +1279,9 @@ def _public_demand_signal(text: str, query: str) -> str:
     lower = cleaned.lower()
     markers = (
         "looking for", "recommend", "need ", "anyone know", "in search of",
-        "where can i find", "meal prep", "family dinner", "printable", "template",
+        "where can i find", "someone to cook", "cook for me", "cook for my family",
+        "meal prep for me", "meal prep help", "in-home meal prep",
+        "personal chef recommendation", "meal prep", "family dinner", "printable", "template",
     )
     for marker in markers:
         idx = lower.find(marker)
@@ -1274,7 +1294,13 @@ def _public_demand_title(title: str, url: str, query: str) -> str:
     host = urlparse(url).netloc.lower()
     source = _domain_label(host) or "public web"
     lowered = query.lower()
-    if "meal prep" in lowered:
+    if "someone to cook" in lowered or "cook for me" in lowered or "cook for my family" in lowered:
+        topic = "someone to cook for a person or family"
+    elif "meal prep for me" in lowered or "in-home meal prep" in lowered:
+        topic = "meal-prep help for a person or family"
+    elif "personal chef recommendation" in lowered:
+        topic = "personal chef recommendation"
+    elif "meal prep" in lowered:
         topic = "meal prep or family dinner help"
     elif "family dinner" in lowered or "home cooked" in lowered:
         topic = "home-cooked family meals"
