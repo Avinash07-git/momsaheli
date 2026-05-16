@@ -55,6 +55,12 @@ export interface EvidenceCard {
   actionbook_screenshot_url?: string | null;
 }
 
+export interface RevenueCitation {
+  url: string;
+  title: string;
+  snippet: string;
+}
+
 export interface Opportunity {
   id: string;
   title: string;
@@ -64,6 +70,15 @@ export interface Opportunity {
   rationale: string;
   estimated_net_monthly_usd: number;
   requires_permit: boolean;
+  revenue_citations: RevenueCitation[];
+}
+
+export interface ComplianceDimension {
+  dimension: string;
+  passed: boolean;
+  citation_url?: string | null;
+  citation_text?: string | null;
+  note: string;
 }
 
 export interface ComplianceCheck {
@@ -75,6 +90,7 @@ export interface ComplianceCheck {
   legal_citation_source_url?: string | null;
   legal_citation_text?: string | null;
   block_reason?: string | null;
+  dimensions: ComplianceDimension[];
 }
 
 export interface OutreachDraft {

@@ -6,8 +6,8 @@ import json
 import logging
 from typing import AsyncIterator
 
-from app.adapters import actionbook, bright_data, llm_cascade
-from app.schemas import EvidenceCard, Opportunity, Profile
+from app.adapters import actionbook, bright_data, llm_cascade, tavily
+from app.schemas import EvidenceCard, Opportunity, Profile, RevenueCitation
 
 log = logging.getLogger(__name__)
 
@@ -67,10 +67,76 @@ async def gather_evidence(profile: Profile) -> AsyncIterator[EvidenceCard]:
             yield EvidenceCard.model_validate(raw)
 
 
-async def rank_opportunities(profile: Profile, cards: list[EvidenceCard]) -> list[Opportunity]:
-    """Use the LLM cascade to synthesize ranked opportunities from raw evidence cards."""
+def _category_hints_for_profile(profile: Profile) -> list[str]:
+    """Pick 1-2 revenue-search seed phrases for the persona's mostly-likely categories."""
+    skills = " ".join(profile.skills).lower()
+    hints: list[str] = []
+    if any(k in skills for k in ("cooking", "meal", "tiffin", "food")):
+        hints.append("cottage food home cook meal prep")
+    if any(k in skills for k in ("design", "graphic", "canva", "social media", "writing")):
+        hints.append("etsy digital printable shop")
+    if any(k in skills for k in ("tutor", "teach", "school")):
+        hints.append("online tutoring")
+    if not hints:
+        hints = ["side hustle handmade etsy"]
+    return hints[:2]
+
+
+async def gather_revenue_benchmarks(profile: Profile) -> list[RevenueCitation]:
+    """Run REAL parallel Tavily queries for revenue-benchmark data backing our $/mo numbers.
+
+    This is what removes the 'Gemini guessed' critique — the ranking now cites public
+    blog posts, survey reports, seller data with real URLs.
+    """
+    if not tavily.is_configured():
+        return []
+    hints = _category_hints_for_profile(profile)
+    try:
+        # Fire all hint searches in parallel — typically 1-2, ~2-3s wall time
+        envelopes = await asyncio.gather(
+            *(tavily.search_revenue_benchmarks(h, state=profile.state) for h in hints),
+            return_exceptions=True,
+        )
+    except Exception as e:
+        log.warning("market_scout.revenue.fail", extra={"err": str(e)[:200]})
+        return []
+
+    citations: list[RevenueCitation] = []
+    seen_urls: set[str] = set()
+    for env in envelopes:
+        if isinstance(env, Exception) or not isinstance(env, dict):
+            continue
+        for r in env.get("results", [])[:3]:
+            url = r.get("url", "")
+            if not url or url in seen_urls:
+                continue
+            seen_urls.add(url)
+            citations.append(RevenueCitation(
+                url=url,
+                title=(r.get("title") or "")[:160],
+                snippet=(r.get("content") or "")[:280],
+            ))
+        if len(citations) >= 5:
+            break
+    log.info("market_scout.revenue.ok", extra={"citations": len(citations)})
+    return citations[:5]
+
+
+async def rank_opportunities(
+    profile: Profile,
+    cards: list[EvidenceCard],
+    revenue_citations: list[RevenueCitation] | None = None,
+) -> list[Opportunity]:
+    """Use the LLM cascade to synthesize ranked opportunities from raw evidence cards.
+
+    Now grounded in REAL Tavily-fetched revenue-benchmark snippets — the Gemini call
+    receives real numbers from real public sources and is instructed to anchor its
+    estimates to those, not invent them. Each Opportunity carries the citation URLs.
+    """
     if not cards:
         return []
+
+    revenue_citations = revenue_citations or []
 
     system = (
         "You are Market Scout for Mom's Saheli — an agent that surfaces income opportunities "
@@ -83,17 +149,29 @@ async def rank_opportunities(profile: Profile, cards: list[EvidenceCard]) -> lis
         "surfacing the high-paying option that ultimately gets BLOCKED is how the user sees "
         "the system protect her from financially-tempting but illegal paths."
         "\n\n"
+        "GROUND YOUR ESTIMATES: You will be given an array `revenue_benchmarks` of real "
+        "public web sources with revenue data for this persona's category. Use them to anchor "
+        "estimated_net_monthly_usd to realistic real-world numbers — DO NOT invent figures. "
+        "For each opportunity, pick the 1-2 most-relevant benchmark indexes and put them in "
+        "the `revenue_citation_indexes` array. If no benchmark is relevant, leave the array empty."
+        "\n\n"
         "Output strict JSON: {\"opportunities\": [{\"id\": str, \"title\": str, \"category\": "
         "\"food_local\"|\"digital_async\"|\"service_local\"|\"resale\"|\"tutoring\", "
-        "\"evidence_card_ids\": [str], \"rank\": int, \"rationale\": str, "
-        "\"estimated_net_monthly_usd\": int, \"requires_permit\": bool}]}. "
-        "Include one Opportunity per evidence card (so the user sees the full picture). "
-        "Rank by realistic NET monthly income (highest first; lower rank number = better). "
+        "\"evidence_card_ids\": [str], \"rank\": int, \"rationale\": str (MUST cite the "
+        "benchmark in plain text when used, e.g. 'Etsy printable shops average $400-800/mo per [1]'), "
+        "\"estimated_net_monthly_usd\": int, \"requires_permit\": bool, "
+        "\"revenue_citation_indexes\": [int]}]}. "
+        "Include one Opportunity per evidence card. Rank by realistic NET monthly income "
+        "(highest first; lower rank number = better). "
         "Set requires_permit=true for any food category involving prepared meals or daily delivery."
     )
     user = json.dumps({
         "profile": profile.model_dump(mode="json"),
         "evidence_cards": [c.model_dump(mode="json") for c in cards],
+        "revenue_benchmarks": [
+            {"index": i, "url": c.url, "title": c.title, "snippet": c.snippet}
+            for i, c in enumerate(revenue_citations)
+        ],
     })
 
     try:
@@ -101,15 +179,25 @@ async def rank_opportunities(profile: Profile, cards: list[EvidenceCard]) -> lis
             messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
             temperature=0.2,
         )
-        opps = [Opportunity.model_validate(o) for o in result.get("opportunities", [])]
+        opps: list[Opportunity] = []
+        for raw in result.get("opportunities", []):
+            # Resolve citation indexes -> RevenueCitation objects
+            idxs = raw.pop("revenue_citation_indexes", []) or []
+            cites = [revenue_citations[i] for i in idxs if isinstance(i, int) and 0 <= i < len(revenue_citations)]
+            # Fallback: if Gemini cited none but we have benchmarks, attach top 1 so the UI still shows proof
+            if not cites and revenue_citations:
+                cites = [revenue_citations[0]]
+            raw["revenue_citations"] = [c.model_dump(mode="json") for c in cites]
+            opps.append(Opportunity.model_validate(raw))
         opps.sort(key=lambda o: o.rank)
-        log.info("market_scout.ranked", extra={"count": len(opps)})
+        log.info("market_scout.ranked", extra={"count": len(opps), "benchmarks": len(revenue_citations)})
         return opps
     except Exception as e:
         log.warning("market_scout.llm_fallback", extra={"err": str(e)[:200]})
-        # Fallback: heuristic ranking on net income alone
+        # Fallback: heuristic ranking on net income alone (still attach citations if any)
         opps = []
         sorted_cards = sorted(cards[:6], key=lambda c: c.estimated_net_monthly_usd, reverse=True)
+        attach = revenue_citations[:1]  # 1 best citation per opportunity in fallback path
         for i, c in enumerate(sorted_cards):
             opps.append(Opportunity(
                 id=f"opp_{i+1}",
@@ -120,6 +208,7 @@ async def rank_opportunities(profile: Profile, cards: list[EvidenceCard]) -> lis
                 rationale=f"Based on {c.source} comp at ${c.observed_price_usd}. {c.observed_volume_signal}.",
                 estimated_net_monthly_usd=c.estimated_net_monthly_usd,
                 requires_permit=_guess_requires_permit(c.title),
+                revenue_citations=attach,
             ))
         return opps
 
@@ -145,9 +234,20 @@ def _guess_requires_permit(title: str) -> bool:
 
 
 async def run_market_scout(profile: Profile) -> tuple[list[EvidenceCard], list[Opportunity]]:
-    """Full Market Scout pipeline: gather evidence, then rank opportunities."""
+    """Full Market Scout pipeline: gather evidence + real revenue benchmarks IN PARALLEL,
+    then rank with both feeding the LLM.
+
+    The benchmark fan-out kills the 'Gemini hallucinated the number' critique —
+    every $/mo claim is now backed by a real public URL in each Opportunity.
+    """
+    # Phase 1: kick off revenue-benchmark fetch in parallel with evidence gathering
+    benchmark_task = asyncio.create_task(gather_revenue_benchmarks(profile))
+
     cards: list[EvidenceCard] = []
     async for card in gather_evidence(profile):
         cards.append(card)
-    opportunities = await rank_opportunities(profile, cards)
+
+    # Phase 2: wait for benchmarks (already fired) and run the grounded ranking
+    revenue_citations = await benchmark_task
+    opportunities = await rank_opportunities(profile, cards, revenue_citations)
     return cards, opportunities

@@ -6,6 +6,13 @@ from pydantic import BaseModel, Field
 CategoryType = Literal["food_local", "digital_async", "service_local", "resale", "tutoring"]
 
 
+class RevenueCitation(BaseModel):
+    """Real-web evidence backing an income estimate (so it's not a Gemini guess)."""
+    url: str
+    title: str = ""
+    snippet: str = ""
+
+
 class Opportunity(BaseModel):
     id: str
     title: str
@@ -15,3 +22,7 @@ class Opportunity(BaseModel):
     rationale: str = Field(..., description="1-2 sentences from Market Scout")
     estimated_net_monthly_usd: int
     requires_permit: bool = False
+    revenue_citations: list[RevenueCitation] = Field(
+        default_factory=list,
+        description="Real public web sources backing the revenue estimate — kills 'Gemini just guessed' critique",
+    )

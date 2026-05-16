@@ -6,6 +6,15 @@ from pydantic import BaseModel, Field
 Verdict = Literal["PASS", "BLOCK", "WARN"]
 
 
+class ComplianceDimension(BaseModel):
+    """One axis of the multi-vector compliance fan-out (run in parallel via asyncio.gather)."""
+    dimension: str = Field(..., description="e.g. 'state_cottage_food', 'irs_self_employment', 'platform_tos'")
+    passed: bool
+    citation_url: str | None = None
+    citation_text: str | None = None
+    note: str = ""
+
+
 class ComplianceCheck(BaseModel):
     opportunity_id: str
     verdict: Verdict
@@ -23,4 +32,8 @@ class ComplianceCheck(BaseModel):
     block_reason: str | None = Field(
         default=None,
         description="Human-readable summary shown in the UI",
+    )
+    dimensions: list[ComplianceDimension] = Field(
+        default_factory=list,
+        description="Parallel fan-out: multiple real Tavily checks run via asyncio.gather. Adds technical depth + multi-source citation breadth.",
     )

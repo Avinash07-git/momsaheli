@@ -83,6 +83,24 @@ async def search_state_law(state: str) -> dict[str, Any]:
     }
 
 
+async def search_revenue_benchmarks(persona_category_hint: str, state: str = "") -> dict[str, Any]:
+    """Real web search for income-benchmark data backing the revenue estimates.
+
+    Used by Market Scout to ground its ranking in REAL published numbers (Etsy seller
+    revenue reports, cottage-food shop revenue, freelance tutoring rates, etc.) instead
+    of letting Gemini hallucinate a $/mo figure from thin air.
+
+    Returns the same Tavily envelope: { results: [...], answer: str }. Caller picks
+    the 1-3 strongest results and feeds them to Gemini as grounding evidence.
+    """
+    geo = f" in {_state_to_name(state.upper())}" if state else ""
+    query = (
+        f"average monthly revenue {persona_category_hint} side income working mom 2025{geo} "
+        f"earnings benchmark survey data report"
+    )
+    return await search(query, max_results=5, search_depth="advanced")
+
+
 _STATE_NAMES = {
     "CA": "California", "TX": "Texas", "NY": "New York", "FL": "Florida",
     "IL": "Illinois", "PA": "Pennsylvania", "OH": "Ohio", "GA": "Georgia",
