@@ -22,24 +22,29 @@ const PLACEHOLDER_URL_MARKERS = [
 export default function EvidenceCard({ card }: { card: EvidenceCardT }) {
   const badge = SOURCE_BADGE[card.source] ?? SOURCE_BADGE.etsy;
   const sourceLink = getAvailableSourceLink(card);
+  const CardTag = sourceLink ? 'a' : 'article';
 
   return (
-    <article className="surface-lift p-5 animate-slide-in group">
+    <CardTag
+      {...(sourceLink
+        ? {
+            href: sourceLink.url,
+            target: '_blank',
+            rel: 'noopener noreferrer',
+            title: sourceLink.title,
+          }
+        : {})}
+      className={clsx(
+        'surface-lift block p-5 animate-slide-in group',
+        sourceLink && 'cursor-pointer focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2'
+      )}
+    >
       <header className="flex items-start justify-between gap-3 mb-4">
-        <h3 className="font-semibold text-ink-900 leading-snug">
-          {sourceLink ? (
-            <a
-              href={sourceLink.url}
-              target="_blank"
-              rel="noreferrer"
-              className="underline decoration-ink-300 underline-offset-4 hover:text-brand-700 hover:decoration-brand-500 transition-colors"
-              title={sourceLink.title}
-            >
-              {card.title}
-            </a>
-          ) : (
-            card.title
-          )}
+        <h3 className={clsx(
+          'font-semibold text-ink-900 leading-snug transition-colors',
+          sourceLink && 'group-hover:text-brand-700'
+        )}>
+          {card.title}
         </h3>
         <span className={clsx('pill shrink-0', badge.bg, badge.text)}>{badge.label}</span>
       </header>
@@ -59,18 +64,14 @@ export default function EvidenceCard({ card }: { card: EvidenceCardT }) {
       )}
 
       {sourceLink && (
-        <a
-          href={sourceLink.url}
-          target="_blank"
-          rel="noreferrer"
+        <span
           className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-brand-700 hover:text-brand-900"
-          title={sourceLink.title}
         >
           {sourceLink.label}
           <span aria-hidden>↗</span>
-        </a>
+        </span>
       )}
-    </article>
+    </CardTag>
   );
 }
 
