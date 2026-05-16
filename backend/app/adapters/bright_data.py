@@ -14,6 +14,7 @@ import json
 import logging
 import re
 from pathlib import Path
+from urllib.parse import quote_plus
 
 import httpx
 
@@ -99,12 +100,20 @@ async def scrape_market_comps(query: str, source: str = "poshmark") -> list[dict
         log.info("bright_data.comps.fixture", extra={"query": query, "source": source, "reason": "no_creds"})
         return _load_cache_list(cache_path)
 
-    # Bright Data blocks Poshmark/Etsy by robots policy. Re-route to working source.
+    # Bright Data blocks Poshmark/Etsy by robots policy. Re-route to Google SERP
+    # which returns rich SSR'd HTML with prices and seller snippets.
+    fetch_source = source
     if source in ("poshmark", "etsy"):
-        source = "google"
+        fetch_source = "google"
 
     try:
-        html = await _bd_fetch(_build_search_url(source, query))
+        # For SPA marketplaces, route through Google SERP — raw marketplace HTML
+        # lacks extractable listings, but Google's snippet view surfaces prices cleanly.
+        if fetch_source == "craigslist":
+            html = await _bd_fetch(_build_search_url("craigslist", query))
+        else:
+            serp_query = f"{query} price seller buy"
+            html = await _bd_fetch(_build_search_url("google", serp_query))
         if not html:
             raise RuntimeError("empty BD response")
 
@@ -140,18 +149,21 @@ async def scrape_food_local_comps(profile) -> dict:
         log.info("bright_data.foodlocal.fixture", extra={"persona": profile.persona_id, "reason": "no_creds"})
         return _load_cache(cache_path)
 
-    # Real Bright Data scrape: Castiron is the perfect cottage-food marketplace,
-    # open to scraping, no robots blocks. We extract structured listings via Gemini.
+    # Real Bright Data scrape via Google SERP — works for any cottage-food keyword
+    # and returns rich SSR'd HTML with prices and seller info Gemini can extract.
+    # Castiron is an SPA so its raw HTML has no listings to scrape.
     try:
-        # Castiron search bound to the persona's first cooking skill
         skill_query = next(
             (s for s in profile.skills if any(k in s.lower() for k in ("meal", "cook", "food", "tiffin"))),
             "weekend meal pack",
         )
-        html = await _bd_fetch(_build_search_url("castiron", skill_query))
+        # Simple, robust SERP query — surfaces cottage-food listings with prices
+        serp_query = f"{skill_query} {profile.state} cottage food seller price"
+        html = await _bd_fetch(_build_search_url("google", serp_query))
         if not html:
             raise RuntimeError("empty BD response")
 
+        # Tag as castiron source (the spiritual source for cottage-food comps)
         listings = await _extract_listings_from_html(html, query=skill_query, source="castiron")
         if listings:
             for c in listings:
@@ -173,7 +185,7 @@ async def scrape_food_local_comps(profile) -> dict:
 
 
 def _build_search_url(source: str, query: str) -> str:
-    q = query.replace(" ", "+")
+    q = quote_plus(query)
     if source == "castiron":
         return f"https://www.castiron.me/search?query={q}"
     if source == "craigslist":
@@ -227,8 +239,12 @@ async def _extract_listings_from_html(html: str, query: str, source: str) -> lis
     safe_source = source if source in valid_sources else "craigslist"
 
     system = (
-        "You extract structured market-comp listings from raw HTML returned by a Bright Data "
-        "Web Unlocker scrape. Each listing is a real product/service someone is selling. "
+        "You extract structured market-comp listings from raw HTML — typically a Google search "
+        "results page or marketplace listing page returned by a Bright Data scrape. "
+        "Find the actual product/service result snippets in the HTML: titles, prices ($X), "
+        "seller names, URLs from anchor tags. Google SERP results live inside <div class='g'>, "
+        "<h3>, <a href='/url?q='> wrappers. Marketplaces use <a class='listing-card'> or similar. "
+        "Look for any text matching $\\d+ patterns to find prices. "
         "Output ONLY JSON in this exact shape: "
         '{"listings": [{'
         '"id": str (e.g. "bd_castiron_001"), '
