@@ -12,32 +12,59 @@ from app.schemas import EvidenceCard, Opportunity, Profile
 log = logging.getLogger(__name__)
 
 
-def _query_for_persona(profile: Profile) -> tuple[str, str]:
-    """Pick (etsy_query, poshmark_query) based on persona skills + constraints."""
+def _persona_sources(profile: Profile) -> list[tuple[str, str, str]]:
+    """Pick (adapter, source_slug, query) tuples appropriate for the persona.
+
+    Etsy is for DIGITAL/HANDMADE only. Food goes to Castiron / Nextdoor /
+    local Facebook groups — those are the *real* marketplaces home cooks use.
+    """
+    constraints = set(profile.hard_constraints)
     skills = " ".join(profile.skills).lower()
-    if "no_delivery" in profile.hard_constraints or "fully_async" in profile.hard_constraints:
-        return ("kids lunch printable", "digital download printable")
+
+    is_digital_first = (
+        "no_delivery" in constraints
+        or "fully_async" in constraints
+        or "no_inventory" in constraints
+    )
+
+    if is_digital_first:
+        # Etsy + Poshmark are correct for digital products
+        return [
+            ("actionbook_etsy", "etsy", "kids lunch printable"),
+            ("brightdata_comps", "poshmark", "digital download printable"),
+        ]
+
     if "cooking" in skills or "meal" in skills:
-        return ("weekend family meal pack", "meal prep containers")
-    return ("home craft", "handmade goods")
+        # Food: Castiron/Nextdoor/FB groups via Bright Data; NO Etsy
+        return [
+            ("foodlocal", "castiron", "weekend family meal pack"),
+        ]
+
+    # Generic fallback
+    return [
+        ("actionbook_etsy", "etsy", "home craft"),
+        ("brightdata_comps", "poshmark", "handmade goods"),
+    ]
 
 
 async def gather_evidence(profile: Profile) -> AsyncIterator[EvidenceCard]:
-    """Yields EvidenceCards as they arrive from Actionbook + Bright Data."""
-    etsy_q, poshmark_q = _query_for_persona(profile)
+    """Yields EvidenceCards as they arrive from the persona-appropriate adapters."""
+    source_plan = _persona_sources(profile)
 
-    etsy_task = asyncio.create_task(actionbook.live_etsy_search(etsy_q))
-    poshmark_task = asyncio.create_task(bright_data.scrape_market_comps(poshmark_q, source="poshmark"))
+    tasks: list = []
+    for adapter, source_slug, query in source_plan:
+        if adapter == "actionbook_etsy":
+            tasks.append((source_slug, asyncio.create_task(actionbook.live_etsy_search(query))))
+        elif adapter == "brightdata_comps":
+            tasks.append((source_slug, asyncio.create_task(bright_data.scrape_market_comps(query, source=source_slug))))
+        elif adapter == "foodlocal":
+            tasks.append((source_slug, asyncio.create_task(bright_data.scrape_food_local_comps(profile))))
 
-    # Yield Etsy listings first (the visible "real browser" moment)
-    etsy_result = await etsy_task
-    for raw in etsy_result.get("listings", []):
-        yield EvidenceCard.model_validate(raw)
-
-    # Then yield Poshmark comps
-    poshmark_result = await poshmark_task
-    for raw in poshmark_result:
-        yield EvidenceCard.model_validate(raw)
+    for source_slug, task in tasks:
+        result = await task
+        listings = result.get("listings", []) if isinstance(result, dict) else result
+        for raw in listings:
+            yield EvidenceCard.model_validate(raw)
 
 
 async def rank_opportunities(profile: Profile, cards: list[EvidenceCard]) -> list[Opportunity]:

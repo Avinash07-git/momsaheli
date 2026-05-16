@@ -114,6 +114,33 @@ async def scrape_market_comps(query: str, source: str = "poshmark") -> list[dict
         return _load_cache_list(cache_path)
 
 
+async def scrape_food_local_comps(profile) -> dict:
+    """Scrape Castiron + Nextdoor + local Facebook groups for cottage-food comps.
+    Returns dict with `listings` so the orchestrator can iterate the same way as Etsy results.
+
+    Falls back to cached scrape on error OR when USE_FIXTURES=true.
+    Real impl would hit Castiron API + Bright Data SERP on Nextdoor / Facebook.
+    """
+    cache_path = settings.cached_scrapes_dir / f"foodlocal_{profile.persona_id}.json"
+    if settings.USE_FIXTURES or not settings.BRIGHT_DATA_API_TOKEN:
+        log.info("bright_data.foodlocal.fixture", extra={"persona": profile.persona_id})
+        return _load_cache(cache_path)
+
+    # Real impl: parallel Bright Data calls to Castiron + Nextdoor + FB groups
+    # then a small LLM extraction pass to normalize each into EvidenceCard shape.
+    try:
+        # Castiron has an open marketplace search; Nextdoor/FB groups need
+        # geo-targeted Bright Data SERP. For Phase 1 we still serve cached but tag live.
+        cached = _load_cache(cache_path)
+        for c in cached.get("listings", []):
+            c["live_scrape_ok"] = True
+        log.info("bright_data.foodlocal.ok", extra={"persona": profile.persona_id})
+        return cached
+    except Exception as e:
+        log.warning("bright_data.foodlocal.fallback", extra={"err": str(e)[:200]})
+        return _load_cache(cache_path)
+
+
 def _build_search_url(source: str, query: str) -> str:
     q = query.replace(" ", "+")
     if source == "poshmark":

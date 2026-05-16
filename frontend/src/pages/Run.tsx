@@ -16,9 +16,15 @@ import type {
   Profile,
 } from '../types';
 
-const ETSY_URLS: Record<string, string> = {
-  jenny: 'https://www.etsy.com/search?q=weekend+family+meal+pack&order=most_relevant',
-  jessica: 'https://www.etsy.com/search?q=kids+lunch+printable&order=most_relevant',
+const SCRAPE_URLS: Record<string, { url: string; title: string }> = {
+  jenny: {
+    url: 'https://castiron.me/search?q=weekend+meal+pack',
+    title: 'Bright Data · Castiron',
+  },
+  jessica: {
+    url: 'https://www.etsy.com/search?q=kids+lunch+printable',
+    title: 'Actionbook · Etsy',
+  },
 };
 
 const LAW_URLS: Record<string, string> = {
@@ -172,24 +178,22 @@ export default function Run() {
         <aside className="lg:col-span-3 space-y-4">
           <h2 className="serif text-lg font-bold text-gray-900">🌐 Live browser sessions</h2>
           <BrowserFrame
-            url={ETSY_URLS[persona] ?? ETSY_URLS.jenny}
-            title="Actionbook · Etsy"
+            url={SCRAPE_URLS[persona]?.url ?? SCRAPE_URLS.jenny.url}
+            title={SCRAPE_URLS[persona]?.title ?? SCRAPE_URLS.jenny.title}
             active={marketBusy || evidenceCards.length > 0}
           >
-            {evidenceCards.filter((c) => c.source === 'etsy').length === 0 ? (
-              <p className="text-gray-400 italic">Waiting for Actionbook session…</p>
+            {evidenceCards.length === 0 ? (
+              <p className="text-gray-400 italic">Waiting for scrape…</p>
             ) : (
               <ul className="space-y-1.5">
-                {evidenceCards
-                  .filter((c) => c.source === 'etsy')
-                  .map((c) => (
-                    <li key={c.id} className="border-b border-gray-100 pb-1.5">
-                      <div className="text-sm font-medium text-gray-800 truncate">{c.title}</div>
-                      <div className="text-xs text-gray-500">
-                        ${c.observed_price_usd.toFixed(0)} · {c.observed_volume_signal}
-                      </div>
-                    </li>
-                  ))}
+                {evidenceCards.map((c) => (
+                  <li key={c.id} className="border-b border-gray-100 pb-1.5">
+                    <div className="text-sm font-medium text-gray-800 truncate">{c.title}</div>
+                    <div className="text-xs text-gray-500">
+                      ${c.observed_price_usd.toFixed(0)} · {c.observed_volume_signal} · <span className="font-mono">{c.source}</span>
+                    </div>
+                  </li>
+                ))}
               </ul>
             )}
           </BrowserFrame>

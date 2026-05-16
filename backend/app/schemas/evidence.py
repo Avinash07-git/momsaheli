@@ -3,7 +3,17 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-SourceType = Literal["etsy", "poshmark", "craigslist", "nextdoor", "outschool", "facebook_marketplace"]
+SourceType = Literal[
+    "etsy",            # digital + handmade only
+    "poshmark",        # resale + digital downloads
+    "craigslist",      # local services
+    "nextdoor",        # hyper-local services + food
+    "outschool",       # online tutoring
+    "facebook_marketplace",
+    "facebook_group",  # local home-chef + community groups
+    "castiron",        # cottage-food marketplace
+    "instagram",       # home-chef DM commerce
+]
 
 
 class EvidenceCard(BaseModel):

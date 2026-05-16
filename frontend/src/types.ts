@@ -33,7 +33,16 @@ export interface Profile {
 export interface EvidenceCard {
   id: string;
   title: string;
-  source: 'etsy' | 'poshmark' | 'craigslist' | 'nextdoor' | 'outschool' | 'facebook_marketplace';
+  source:
+    | 'etsy'
+    | 'poshmark'
+    | 'craigslist'
+    | 'nextdoor'
+    | 'outschool'
+    | 'facebook_marketplace'
+    | 'facebook_group'
+    | 'castiron'
+    | 'instagram';
   source_url: string;
   observed_price_usd: number;
   observed_volume_signal: string;

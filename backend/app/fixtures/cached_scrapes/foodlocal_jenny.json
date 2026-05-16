@@ -1,0 +1,80 @@
+{
+  "session_id": "ab_fixture_jenny_food",
+  "screenshot_url": null,
+  "query": "weekend family meal pack",
+  "site": "castiron.me + nextdoor + facebook_groups",
+  "listings": [
+    {
+      "id": "ctn_001",
+      "title": "Daily Tiffin Lunch Delivery — 5 days/wk",
+      "source": "castiron",
+      "source_url": "https://castiron.me/search?q=tiffin+lunch+delivery",
+      "observed_price_usd": 75.0,
+      "observed_volume_signal": "12 active subscribers in Bay Area",
+      "estimated_gross_monthly_usd": 1500,
+      "estimated_net_monthly_usd": 850,
+      "time_to_first_dollar_days": 21,
+      "notes": "High gross but daily prep + hot delivery — flagged for compliance check"
+    },
+    {
+      "id": "ctn_002",
+      "title": "Weekend Family Meal Pack — 4 servings, preorder",
+      "source": "castiron",
+      "source_url": "https://castiron.me/search?q=weekend+meal+pack",
+      "observed_price_usd": 50.0,
+      "observed_volume_signal": "23 sold last month on Castiron",
+      "estimated_gross_monthly_usd": 600,
+      "estimated_net_monthly_usd": 420,
+      "time_to_first_dollar_days": 7,
+      "notes": "Preorder model — qualifies for Class A cottage food in most states"
+    },
+    {
+      "id": "fb_003",
+      "title": "Kids Birthday Party Mini-Catering Boxes",
+      "source": "facebook_group",
+      "source_url": "https://www.facebook.com/groups/fresnohomecooks",
+      "observed_price_usd": 120.0,
+      "observed_volume_signal": "4 sold last month in local FB group",
+      "estimated_gross_monthly_usd": 480,
+      "estimated_net_monthly_usd": 290,
+      "time_to_first_dollar_days": 14,
+      "notes": "Higher margin per order but lower volume"
+    },
+    {
+      "id": "ctn_004",
+      "title": "Custom Lunchbox Meal-Prep Subscription",
+      "source": "castiron",
+      "source_url": "https://castiron.me/search?q=lunchbox+subscription",
+      "observed_price_usd": 95.0,
+      "observed_volume_signal": "12 active subscribers",
+      "estimated_gross_monthly_usd": 1140,
+      "estimated_net_monthly_usd": 620,
+      "time_to_first_dollar_days": 28,
+      "notes": "Refrigerated subscription — likely requires Class B permit"
+    },
+    {
+      "id": "nd_005",
+      "title": "Weekend Baked Goods — Sourdough + Cookies",
+      "source": "nextdoor",
+      "source_url": "https://nextdoor.com/feed/?marketplace=baked_goods",
+      "observed_price_usd": 22.0,
+      "observed_volume_signal": "8 neighbors ordered last weekend",
+      "estimated_gross_monthly_usd": 350,
+      "estimated_net_monthly_usd": 260,
+      "time_to_first_dollar_days": 3,
+      "notes": "Lowest barrier — pure Class A cottage food"
+    },
+    {
+      "id": "fb_006",
+      "title": "Holiday Cookie Box Preorder (10-pack)",
+      "source": "facebook_group",
+      "source_url": "https://www.facebook.com/groups/fresnohomecooks",
+      "observed_price_usd": 35.0,
+      "observed_volume_signal": "seasonal — 18 sold last December",
+      "estimated_gross_monthly_usd": 220,
+      "estimated_net_monthly_usd": 175,
+      "time_to_first_dollar_days": 10,
+      "notes": "Seasonal opportunity, qualifies for Class A"
+    }
+  ]
+}

@@ -40,12 +40,13 @@ export default function Home() {
               Agent Forge AI Hackathon · San Francisco · May 16 2026
             </p>
             <h1 className="serif text-5xl md:text-7xl font-bold text-gray-900 leading-tight mb-5">
-              The friend she can't afford.
+              The friend every working mom can <span className="text-brand-700">finally</span> afford.
             </h1>
             <p className="text-xl text-gray-700 leading-relaxed mb-8 max-w-2xl">
-              Mom's Saheli is the <strong>agent-native economic mobility layer</strong>:
-              live market intel, live regulatory scrape, real launch page, cross-user learning.
-              Today: working moms. Tomorrow: every constrained earner.
+              A consultant costs $2,000. A bookkeeper, a lawyer, a marketer—each $200/hr.
+              Mom's Saheli is the <strong>agent swarm that does all of it</strong>: live market intel,
+              live regulatory check, real launch page, cross-user learning. Today: working moms.
+              Tomorrow: every constrained earner.
             </p>
             <div className="flex flex-wrap items-center gap-3 text-sm text-gray-700">
               <span className="pill bg-brand-100 text-brand-800">5 agents</span>

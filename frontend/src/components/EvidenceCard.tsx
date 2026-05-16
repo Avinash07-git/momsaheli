@@ -8,6 +8,9 @@ const SOURCE_BADGE: Record<string, { label: string; bg: string; text: string }> 
   nextdoor: { label: 'Nextdoor', bg: 'bg-green-100', text: 'text-green-800' },
   outschool: { label: 'Outschool', bg: 'bg-blue-100', text: 'text-blue-800' },
   facebook_marketplace: { label: 'FB Marketplace', bg: 'bg-blue-100', text: 'text-blue-800' },
+  facebook_group: { label: 'FB Group', bg: 'bg-blue-100', text: 'text-blue-800' },
+  castiron: { label: 'Castiron', bg: 'bg-amber-100', text: 'text-amber-900' },
+  instagram: { label: 'Instagram', bg: 'bg-fuchsia-100', text: 'text-fuchsia-800' },
 };
 
 export default function EvidenceCard({ card }: { card: EvidenceCardT }) {

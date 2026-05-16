@@ -4,11 +4,11 @@ export default function NavBar() {
   return (
     <header className="border-b border-brand-100 bg-white/80 backdrop-blur sticky top-0 z-10">
       <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2">
-          <span className="text-2xl" aria-hidden>🌸</span>
+        <Link to="/" className="flex items-center gap-3">
+          <span className="text-4xl" aria-hidden>🌸</span>
           <div>
-            <div className="serif text-xl font-bold text-brand-800 leading-tight">Mom's Saheli</div>
-            <div className="text-xs text-gray-500 -mt-0.5">the friend she can't afford</div>
+            <div className="serif text-3xl md:text-4xl font-bold text-brand-800 leading-none">Mom's Saheli</div>
+            <div className="text-xs text-brand-700/80 mt-1">the friend every working mom can afford</div>
           </div>
         </Link>
         <nav className="flex items-center gap-6 text-sm">
