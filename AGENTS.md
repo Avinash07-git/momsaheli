@@ -22,22 +22,26 @@
 6. ✅ Brain-transplant docs: this file + accurate README + scripts/setup.sh
 7. ✅ Folder cleanup: planning docs moved into `docs/` + `docs/legacy/`
 
-**What we shipped Day 1 session 2 (this laptop):**
+**What we shipped Day 1 session 2 (laptop 2 — Claude Code):**
 8. ✅ AgentField `af` CLI installed (`~/.agentfield/bin/af`)
-9. ✅ `backend/app/agentfield_agent.py` — 6 `@reasoner` endpoints registered:
-   - `profile_agent`, `market_scout`, `reality_compliance_agent`, `launch_agent`, `memory_agent`, `run_full_swarm`
-10. ✅ `scripts/start.sh` — one command starts all 4 processes (af server :8080, FastAPI :8000, AF agent :8001, frontend :5173)
+9. ✅ `backend/app/agentfield_agent.py` — 6 `@reasoner` endpoints, preflight check, exits 0 gracefully if CP unreachable
+10. ✅ `scripts/start.sh` — crash-proof: auto-detects `af`, auto-detects npm in `/tmp/node-v*`, skips AF cleanly if missing
 11. ✅ AgentField dashboard verified live at `http://localhost:8080/ui/` with 1 agent, 6 reasoners
+12. ✅ `run_full_swarm` now calls 5 child reasoners in sequence → **nested waterfall in dashboard** (THE demo moment)
+13. ✅ Full UI overhaul — editorial-premium design system, every surface polished
+14. ✅ NavBar shows live "● Live workflow ↗" link auto-detected from `/health`
 
 **Verified end-to-end:** Jenny run = 6 opps ranked by real Gemini, 3 BLOCKs with real 
 `.gov` citation URLs from Tavily, real Gemini-written launch page at 
 `/launch/jenny-jenny-s-weekend-family-dinners`. Total run time ~38s (real LLM latency).
 
 **👉 Exact next actions at hackathon Day 2:**
-1. Grab **Actionbook key** at booth → paste `ACTIONBOOK_API_KEY` + `ACTIONBOOK_WORKSPACE_ID` into `.env` → live browser actions activate
-2. Grab **Qwen Cloud key** at booth → paste `QWEN_API_KEY` into `.env` → cascade promotes Qwen to primary LLM
-3. Grab **Bright Data zone** at booth → paste `BRIGHT_DATA_ZONE` into `.env` → swap from Tavily in 1 line
-4. **Deploy to Zeabur** — non-negotiable for judging ("must be live, not localhost"). Code: `BUILDER0516` at zeabur.com/events
+1. **Deploy to Zeabur** — non-negotiable for judging ("must be live, not localhost"). Code: `BUILDER0516` at zeabur.com/events
+2. Grab **Qwen Cloud key** at booth → paste `QWEN_API_KEY` → cascade promotes Qwen to primary
+3. Grab **Bright Data zone** at booth → paste `BRIGHT_DATA_ZONE` → swap from Tavily in 1 line
+4. Grab **Actionbook key** at booth → paste `ACTIONBOOK_API_KEY` + `ACTIONBOOK_WORKSPACE_ID` → live browser actions
+5. Grab **Evermind, Z.ai, TokenRouter** keys at booths → all activate on key presence
+6. **Record Loom backup video** before 3 PM — 90 seconds, run Jenny once
 
 **Booth credit codes (don't lose these):**
 - Butterbase: `FUN0516` at butterbase.ai (click "grab a slice") — $20 credit
