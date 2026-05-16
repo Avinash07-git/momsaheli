@@ -51,15 +51,16 @@ const SWARM_PLAN = [
 
 export default function Home() {
   return (
-    <div className="bg-white">
+    <div className="bg-[#fffaf0]">
 
       {/* ══════════════════════════════════════════
-          HERO — near-black, white type, one blue accent
+          HERO — warm light mode
           ══════════════════════════════════════════ */}
-      <section className="relative bg-[#09090b] overflow-hidden">
-        {/* Subtle blue glow top-right — not gold, just a cool haze */}
-        <div className="absolute top-0 right-0 w-[700px] h-[500px] opacity-[0.07] blur-3xl pointer-events-none rounded-full"
-          style={{ background: 'radial-gradient(circle, #6366f1 0%, transparent 70%)' }} />
+      <section className="relative bg-[#fff7df] overflow-hidden border-b border-amber-100">
+        <div className="absolute top-0 right-0 w-[720px] h-[520px] opacity-60 blur-3xl pointer-events-none rounded-full"
+          style={{ background: 'radial-gradient(circle, #fde68a 0%, transparent 70%)' }} />
+        <div className="absolute -bottom-24 left-0 w-[520px] h-[360px] opacity-50 blur-3xl pointer-events-none rounded-full"
+          style={{ background: 'radial-gradient(circle, #fbcfe8 0%, transparent 68%)' }} />
 
         <div className="relative max-w-7xl mx-auto px-6 pt-24 pb-28 lg:pt-32 lg:pb-36">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
@@ -67,38 +68,38 @@ export default function Home() {
             {/* Left: headline */}
             <div>
               {/* Event badge */}
-              <div className="inline-flex items-center gap-2 mb-8 px-3.5 py-1.5 rounded-full border border-white/10 bg-white/[0.04]">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                <span className="text-[12px] font-medium text-white/50 tracking-wide">
+              <div className="inline-flex items-center gap-2 mb-8 px-3.5 py-1.5 rounded-full border border-amber-200 bg-white/70 shadow-sm">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span className="text-[12px] font-medium text-[#7c6f55] tracking-wide">
                   Agent Forge AI Hackathon · SF · May 16, 2026
                 </span>
               </div>
 
-              <h1 className="font-serif text-[50px] lg:text-[64px] font-bold leading-[1.06] tracking-tight text-white mb-6">
+              <h1 className="font-serif text-[50px] lg:text-[64px] font-bold leading-[1.06] tracking-tight text-[#18181b] mb-6">
                 The friend every<br />
                 working mom can<br />
-                <span className="text-white/90 italic">finally</span> afford.
+                <span className="text-amber-700 italic">finally</span> afford.
               </h1>
 
-              <p className="text-[16px] text-white/50 leading-relaxed mb-10 max-w-md">
+              <p className="text-[16px] text-[#665f54] leading-relaxed mb-10 max-w-md">
                 A consultant costs $2,000. Mom's Saheli is the AI agent swarm that does it all —
                 live market intel, cited legal checks, and a real published launch page.
               </p>
 
               <div className="flex flex-wrap gap-3 mb-10">
                 <a href="#run"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-[#09090b] font-semibold text-[14px] hover:bg-white/90 transition-colors shadow-lg">
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#18181b] text-white font-semibold text-[14px] hover:bg-[#3f3f46] transition-colors shadow-lg">
                   Run the swarm →
                 </a>
                 <a href="#how"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-white/10 text-white/60 font-medium text-[14px] hover:bg-white/[0.05] hover:text-white/80 transition-colors">
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-amber-200 bg-white/50 text-[#665f54] font-medium text-[14px] hover:bg-white hover:text-[#18181b] transition-colors">
                   How it works
                 </a>
               </div>
 
               <div className="flex flex-wrap gap-2">
                 {['5 AI agents', '9 sponsor tools', 'Cited regulations', 'Real launch pages'].map((f) => (
-                  <span key={f} className="px-3 py-1 rounded-full text-[11px] font-medium text-white/30 border border-white/[0.08]">
+                  <span key={f} className="px-3 py-1 rounded-full text-[11px] font-medium text-[#7c6f55] border border-amber-200 bg-white/45">
                     {f}
                   </span>
                 ))}
@@ -107,14 +108,14 @@ export default function Home() {
 
             {/* Right: product preview card — dark glass */}
             <div className="relative">
-              <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] overflow-hidden">
+              <div className="rounded-2xl border border-amber-200 bg-white/80 overflow-hidden shadow-xl shadow-amber-900/5">
                 {/* Card header */}
-                <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/[0.06]">
+                <div className="flex items-center justify-between px-5 py-3.5 border-b border-amber-100">
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                    <span className="text-[12px] font-medium text-white/50">live agent run · jenny</span>
+                    <span className="text-[12px] font-medium text-[#7c6f55]">live agent run · jenny</span>
                   </div>
-                  <span className="text-[11px] font-mono text-white/20">run_a93f1c…</span>
+                  <span className="text-[11px] font-mono text-[#a1a1aa]">run_a93f1c…</span>
                 </div>
                 {/* Agent rows */}
                 <div className="px-5 py-5 space-y-3.5">
@@ -128,15 +129,15 @@ export default function Home() {
                     <div key={row.agent} className="flex items-center gap-3">
                       <span className="w-1.5 h-1.5 rounded-full shrink-0"
                         style={{ background: row.dot }} />
-                      <span className="text-[13px] font-medium text-white/70 w-44 shrink-0">{row.agent}</span>
-                      <span className="text-[12px] text-white/30 truncate">{row.label}</span>
+                      <span className="text-[13px] font-medium text-[#27272a] w-44 shrink-0">{row.agent}</span>
+                      <span className="text-[12px] text-[#71717a] truncate">{row.label}</span>
                     </div>
                   ))}
                 </div>
                 {/* Footer */}
-                <div className="px-5 py-3 border-t border-white/[0.06] flex items-center justify-between">
-                  <span className="text-[11px] text-white/20">via AgentField</span>
-                  <span className="text-[11px] font-mono text-white/30">22.3s elapsed</span>
+                <div className="px-5 py-3 border-t border-amber-100 flex items-center justify-between">
+                  <span className="text-[11px] text-[#a1a1aa]">via AgentField</span>
+                  <span className="text-[11px] font-mono text-[#71717a]">22.3s elapsed</span>
                 </div>
               </div>
             </div>
@@ -146,21 +147,21 @@ export default function Home() {
       </section>
 
       {/* ══════════════════════════════════════════
-          STATS — dark bg, white numbers, clean
+          STATS — light mode
           ══════════════════════════════════════════ */}
-      <section className="bg-[#0f0f11] border-t border-white/[0.06] py-16">
+      <section className="bg-[#fffaf0] border-t border-amber-100 py-16">
         <div className="max-w-7xl mx-auto px-6">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/20 mb-10 text-center">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#b08a3b] mb-10 text-center">
             The problem, by the numbers — every figure cited
           </p>
-          <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-white/[0.06]">
+          <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-amber-100">
             {STATS.map((s) => (
               <div key={s.label} className="px-8 first:pl-0 last:pr-0 py-2">
-                <div className="font-serif text-[48px] lg:text-[56px] font-bold leading-none text-white tabular-nums mb-2">
+                <div className="font-serif text-[48px] lg:text-[56px] font-bold leading-none text-[#18181b] tabular-nums mb-2">
                   {s.number}
                 </div>
-                <div className="text-[13px] text-white/40 leading-snug mb-3">{s.label}</div>
-                <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/20">{s.source}</div>
+                <div className="text-[13px] text-[#665f54] leading-snug mb-3">{s.label}</div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#b08a3b]">{s.source}</div>
               </div>
             ))}
           </div>
@@ -231,24 +232,6 @@ export default function Home() {
               </p>
             </div>
             <PersonaCards />
-          </div>
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════════════
-          SPONSOR BAR — white, minimal
-          ══════════════════════════════════════════ */}
-      <section className="bg-white border-t border-[#f4f4f5] py-14">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#a1a1aa] mb-8">
-            Built on the Agent Forge sponsor stack — every tool load-bearing
-          </p>
-          <div className="flex flex-wrap justify-center gap-x-10 gap-y-3">
-            {['AgentField', 'Bright Data', 'Actionbook', 'Evermind', 'Butterbase', 'Qwen', 'Z.ai', 'TokenRouter', 'Zeabur'].map((s) => (
-              <span key={s} className="text-[13px] font-medium text-[#a1a1aa] hover:text-[#18181b] transition-colors cursor-default">
-                {s}
-              </span>
-            ))}
           </div>
         </div>
       </section>
