@@ -60,9 +60,10 @@ def _preflight_or_exit() -> None:
         sys.exit(0)
 
 
-_preflight_or_exit()
-
-
+# Build the Agent instance unconditionally — instantiating it is side-effect-free
+# (it just configures the FastAPI subclass). The preflight that contacts the
+# control plane only runs when this module is executed as __main__, so importing
+# it from tests / IDE / FastAPI never accidentally calls sys.exit().
 af = Agent(
     node_id="moms-saheli-swarm",
     agentfield_server=settings.AGENTFIELD_CONTROL_PLANE_URL,
@@ -222,6 +223,7 @@ async def run_full_swarm(raw_profile: dict) -> dict:
 
 
 if __name__ == "__main__":
+    _preflight_or_exit()  # Only when run directly; not on plain import.
     log.info("AgentField agent starting on :8001 (control plane: %s)",
              settings.AGENTFIELD_CONTROL_PLANE_URL)
     try:
