@@ -13,9 +13,13 @@ class Settings(BaseSettings):
 
     # --- LLM cascade ---
     TOKEN_ROUTER_API_KEY: str = ""
+    # Qwen comes tomorrow
     QWEN_API_KEY: str = ""
     QWEN_BASE_URL: str = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
     QWEN_MODEL: str = "qwen-plus"
+    # Gemini (free) is our active LLM today
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-2.5-flash"
     ZAI_API_KEY: str = ""
     ZAI_BASE_URL: str = "https://api.z.ai/api/paas/v4"
     ZAI_MODEL: str = "glm-4-plus"
@@ -23,6 +27,8 @@ class Settings(BaseSettings):
     # --- Web intel ---
     BRIGHT_DATA_API_TOKEN: str = ""
     BRIGHT_DATA_ZONE: str = ""
+    # Tavily (free) is our active web-search engine today; swap to Bright Data when zone is set up
+    TAVILY_API_KEY: str = ""
     ACTIONBOOK_API_KEY: str = ""
     ACTIONBOOK_WORKSPACE_ID: str = ""
 

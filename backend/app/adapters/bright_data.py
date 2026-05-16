@@ -14,6 +14,7 @@ from pathlib import Path
 
 import httpx
 
+from app.adapters import tavily
 from app.settings import settings
 
 log = logging.getLogger(__name__)
@@ -29,48 +30,58 @@ STATE_LAW_URLS = {
 
 
 async def scrape_state_law(state: str) -> dict:
-    """Fetch a state's cottage-food / permit page via Bright Data.
-    Returns dict with: source_url, html_snippet, citation_text, requires_permit_for_hot_food.
+    """Fetch a state's cottage-food / permit page.
 
-    Falls back to cached scrape on error OR when USE_FIXTURES=true.
+    Priority order:
+      1. Real Bright Data Web Unlocker scrape (when zone is configured)
+      2. Live Tavily web search (when only Tavily key is set)  — today's path
+      3. Cached fixture (offline fallback)
+
+    Returns dict with: source_url, citation_text, requires_permit_for_hot_food,
+                       live_scrape_ok, live_scrape_provider.
     """
     state = state.upper()
     cache_path = settings.cached_scrapes_dir / f"{state.lower()}_cottage_food.json"
 
-    if settings.USE_FIXTURES or not settings.BRIGHT_DATA_API_TOKEN:
-        log.info("bright_data.fixture", extra={"state": state, "path": str(cache_path)})
-        return _load_cache(cache_path)
+    # Path 1: Bright Data (zone required)
+    if settings.BRIGHT_DATA_API_TOKEN and settings.BRIGHT_DATA_ZONE and not settings.USE_FIXTURES:
+        url = STATE_LAW_URLS.get(state)
+        if url:
+            try:
+                payload = {
+                    "zone": settings.BRIGHT_DATA_ZONE,
+                    "url": url,
+                    "format": "raw",
+                }
+                headers = {
+                    "Authorization": f"Bearer {settings.BRIGHT_DATA_API_TOKEN}",
+                    "Content-Type": "application/json",
+                }
+                async with httpx.AsyncClient(timeout=15.0) as client:
+                    resp = await client.post(BRIGHT_DATA_API, json=payload, headers=headers)
+                    resp.raise_for_status()
+                    html = resp.text
+                cached = _load_cache(cache_path)
+                cached["live_scrape_bytes"] = len(html)
+                cached["live_scrape_ok"] = True
+                cached["live_scrape_provider"] = "bright_data"
+                log.info("bright_data.ok", extra={"state": state, "bytes": len(html)})
+                return cached
+            except Exception as e:
+                log.warning("bright_data.fallback_to_tavily", extra={"err": str(e)[:200]})
 
-    url = STATE_LAW_URLS.get(state)
-    if not url:
-        log.warning("bright_data.no_url", extra={"state": state})
-        return _load_cache(cache_path)
+    # Path 2: Tavily live search (free, no zone needed)
+    if tavily.is_configured():
+        try:
+            live = await tavily.search_state_law(state)
+            log.info("bright_data.via_tavily.ok", extra={"state": state})
+            return live
+        except Exception as e:
+            log.warning("bright_data.via_tavily.fallback", extra={"err": str(e)[:200]})
 
-    try:
-        payload = {
-            "zone": settings.BRIGHT_DATA_ZONE,
-            "url": url,
-            "format": "raw",
-        }
-        headers = {
-            "Authorization": f"Bearer {settings.BRIGHT_DATA_API_TOKEN}",
-            "Content-Type": "application/json",
-        }
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.post(BRIGHT_DATA_API, json=payload, headers=headers)
-            resp.raise_for_status()
-            html = resp.text
-
-        # Cached citation is still source-of-truth for the displayed legal text —
-        # the live scrape proves the page is reachable AND state-agnostic.
-        cached = _load_cache(cache_path)
-        cached["live_scrape_bytes"] = len(html)
-        cached["live_scrape_ok"] = True
-        log.info("bright_data.ok", extra={"state": state, "bytes": len(html)})
-        return cached
-    except Exception as e:
-        log.warning("bright_data.fallback", extra={"state": state, "err": str(e)[:200]})
-        return _load_cache(cache_path)
+    # Path 3: cached fixture
+    log.info("bright_data.fixture", extra={"state": state})
+    return _load_cache(cache_path)
 
 
 async def scrape_market_comps(query: str, source: str = "poshmark") -> list[dict]:

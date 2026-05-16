@@ -84,13 +84,16 @@ _TCS_MARKERS = (
 )
 
 
-async def _check_legal(opportunity: Opportunity, profile: Profile) -> tuple[bool, str | None, str | None, str | None]:
-    """Live Bright Data scrape of state cottage-food page when food-related.
-    Returns (legal_passed, citation_url, citation_text, block_reason)."""
-    if opportunity.category != "food_local":
+def _check_legal(
+    opportunity: Opportunity,
+    profile: Profile,
+    law_data: dict | None,
+) -> tuple[bool, str | None, str | None, str | None]:
+    """Check opportunity against the (already-fetched) state cottage-food data.
+    Returns (legal_passed, citation_url, citation_text, block_reason).
+    """
+    if opportunity.category != "food_local" or law_data is None:
         return True, None, None, None
-
-    law_data = await bright_data.scrape_state_law(profile.state)
 
     requires_permit = law_data.get("requires_permit_for_hot_food", True)
     citation_text = law_data.get("citation_text")
@@ -109,17 +112,29 @@ async def _check_legal(opportunity: Opportunity, profile: Profile) -> tuple[bool
             f"Daily prep also exceeds her {profile.hours_per_week_available} hr/wk constraint.",
         )
 
-    # Weekend cottage-food (e.g. baked/preorder meal packs) typically allowed under Class A
+    return True, citation_url, citation_text, None
     return True, citation_url, citation_text, None
 
 
 async def run_reality_compliance(
     opportunities: list[Opportunity], profile: Profile
 ) -> AsyncIterator[ComplianceCheck]:
-    """Yields one ComplianceCheck per opportunity, in rank order."""
+    """Yields one ComplianceCheck per opportunity, in rank order.
+
+    Optimization: We scrape the state law ONCE per profile (not per opportunity)
+    because all opportunities share the same state. Saves N-1 redundant Tavily/Bright Data calls.
+    """
+    law_data_cache: dict | None = None
+    needs_law = any(
+        o.category == "food_local" for o in opportunities
+    )
+    if needs_law:
+        log.info("reality_compliance.fetch_state_law", extra={"state": profile.state})
+        law_data_cache = await bright_data.scrape_state_law(profile.state)
+
     for opp in opportunities:
         constraint_passed, constraint_reasons = _check_constraints(opp, profile)
-        legal_passed, cite_url, cite_text, block_reason = await _check_legal(opp, profile)
+        legal_passed, cite_url, cite_text, block_reason = _check_legal(opp, profile, law_data_cache)
 
         if not constraint_passed:
             verdict = "BLOCK"

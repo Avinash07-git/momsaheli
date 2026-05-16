@@ -1,12 +1,19 @@
 """LLM cascade adapter.
 
-Routes through TokenRouter when configured. Falls back to direct Qwen Cloud,
-then Z.ai (GLM). All three use OpenAI-compatible chat-completions APIs.
+Cascade order (live-key-first):
+  1. Gemini 2.5 Flash       — free, fast, our primary today
+  2. Qwen Cloud             — our primary tomorrow (sponsor)
+  3. Z.ai (GLM)             — fallback
 
-Single async entrypoint: `chat(messages, schema=None, model=None)`.
+TokenRouter, when configured, takes precedence over all of them.
+All provider calls use OpenAI-compatible chat-completions shape
+except Gemini which uses the google-generativeai SDK natively.
+
+Single async entrypoint: `chat(messages, json_mode=False)`.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from typing import Any
@@ -52,6 +59,41 @@ async def _call_openai_compatible(
 
 
 @retry(stop=stop_after_attempt(2), wait=wait_exponential_jitter(initial=0.5, max=2.0), reraise=True)
+async def _try_gemini(messages, response_format, temperature) -> str:
+    """Call Google Gemini via the google-generativeai SDK.
+    Gemini supports JSON mode natively via generation_config.
+    """
+    if not settings.GEMINI_API_KEY:
+        raise LLMCascadeError("GEMINI_API_KEY not set")
+
+    import warnings
+    warnings.filterwarnings("ignore", category=FutureWarning)
+    import google.generativeai as genai  # type: ignore
+
+    genai.configure(api_key=settings.GEMINI_API_KEY)
+
+    # Merge system + user messages into one prompt (Gemini Python SDK pattern)
+    system_parts = [m["content"] for m in messages if m["role"] == "system"]
+    user_parts = [m["content"] for m in messages if m["role"] == "user"]
+    system_prompt = "\n\n".join(system_parts) if system_parts else None
+    user_prompt = "\n\n".join(user_parts)
+
+    gen_config: dict[str, Any] = {"temperature": temperature}
+    if response_format and response_format.get("type") == "json_object":
+        gen_config["response_mime_type"] = "application/json"
+
+    model = genai.GenerativeModel(
+        model_name=settings.GEMINI_MODEL,
+        system_instruction=system_prompt,
+        generation_config=gen_config,
+    )
+
+    # google-generativeai is sync; offload to a thread so we stay non-blocking
+    resp = await asyncio.to_thread(model.generate_content, user_prompt)
+    return resp.text
+
+
+@retry(stop=stop_after_attempt(2), wait=wait_exponential_jitter(initial=0.5, max=2.0), reraise=True)
 async def _try_qwen(messages, response_format, temperature) -> str:
     if not settings.QWEN_API_KEY:
         raise LLMCascadeError("QWEN_API_KEY not set")
@@ -86,13 +128,19 @@ async def chat(
 ) -> str:
     """Call the LLM cascade. Returns text (raw or JSON string if json_mode).
 
-    Cascade order: Qwen → Z.ai. (TokenRouter integration lives in token_router.py and
-    can be enabled by setting QWEN_BASE_URL to the TokenRouter endpoint.)
+    Cascade order: Gemini → Qwen → Z.ai. TokenRouter integration lives in
+    token_router.py and can be enabled by setting TOKEN_ROUTER_API_KEY.
     """
     response_format = {"type": "json_object"} if json_mode else None
     last_err: Exception | None = None
 
-    for provider_name, provider_fn in [("qwen", _try_qwen), ("zai", _try_zai)]:
+    providers: list[tuple[str, Any]] = [
+        ("gemini", _try_gemini),
+        ("qwen", _try_qwen),
+        ("zai", _try_zai),
+    ]
+
+    for provider_name, provider_fn in providers:
         try:
             log.info("llm.cascade.try", extra={"provider": provider_name})
             text = await provider_fn(messages, response_format, temperature)
@@ -110,7 +158,7 @@ async def chat_json(messages: list[dict[str, str]], temperature: float = 0.3) ->
     text = await chat(messages, json_mode=True, temperature=temperature)
     try:
         return json.loads(text)
-    except json.JSONDecodeError as e:
+    except json.JSONDecodeError:
         # Some models wrap in ```json ... ``` — try to recover
         cleaned = text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
         return json.loads(cleaned)
