@@ -39,6 +39,14 @@ const PRESETS = [
   },
 ];
 
+const SWARM_PLAN = [
+  'Profile Agent extracts skills, hours, budget, state, and constraints.',
+  'Market Scout gathers live evidence and ranks income paths.',
+  'Reality & Compliance blocks unsafe or illegal options with citations.',
+  'Launch Agent writes the offer, pricing, outreach, and 7-day plan.',
+  'Memory Agent stores what worked for the next run.',
+];
+
 /* ─── Main ──────────────────────────────────────────────────────────────── */
 
 export default function Home() {
@@ -213,7 +221,17 @@ export default function Home() {
             </p>
           </div>
 
-          <PersonaCards />
+          <CustomRunComposer />
+
+          <div className="mt-14 pt-12 border-t border-[#e4e4e7]">
+            <div className="text-center max-w-xl mx-auto mb-8">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#a1a1aa] mb-3">Or use a demo persona</p>
+              <p className="text-[14px] text-[#71717a] leading-relaxed">
+                Jenny and Jessica are fast ways to show the judging story arc.
+              </p>
+            </div>
+            <PersonaCards />
+          </div>
         </div>
       </section>
 
@@ -240,6 +258,91 @@ export default function Home() {
 }
 
 /* ─── Persona cards ─────────────────────────────────────────────────────── */
+
+function CustomRunComposer() {
+  const navigate = useNavigate();
+  const [query, setQuery] = useState(
+    "I'm a single mom in Fresno, CA. I work at a daycare, need $600/month, have 5 hours per week, $80 budget, I can cook, weekends only, no commercial kitchen, no permit."
+  );
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function runCustom() {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const runRes = await fetch('/api/run-text', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query }),
+      });
+      const body = await runRes.json();
+      if (!runRes.ok) throw new Error(body?.detail ?? 'Could not start custom run');
+      navigate(`/run/${body.run_id}?persona=custom`);
+    } catch (e: any) {
+      setError(e?.message ?? String(e));
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="max-w-5xl mx-auto rounded-2xl border border-[#e4e4e7] bg-white overflow-hidden shadow-sm">
+      <div className="grid lg:grid-cols-[1.25fr_0.75fr]">
+        <div className="p-6 lg:p-8 border-b lg:border-b-0 lg:border-r border-[#f4f4f5]">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#a1a1aa] mb-3">
+            Custom request
+          </div>
+          <label htmlFor="custom-run-query" className="font-serif text-[26px] font-bold text-[#09090b] leading-tight">
+            Tell the swarm what she needs.
+          </label>
+          <textarea
+            id="custom-run-query"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="mt-5 w-full min-h-[150px] resize-y rounded-xl border border-[#d4d4d8] bg-[#fafafa] p-4 text-[14px] leading-relaxed text-[#18181b] focus:bg-white focus:border-[#6366f1] focus:ring-2 focus:ring-[#c7d2fe]"
+            placeholder="Example: I am a single mom in Texas. I need $400/month, have 6 hours/week, $50 budget, know Canva, need fully remote async work, no calls."
+          />
+          <div className="mt-4 flex flex-col sm:flex-row gap-3 sm:items-center">
+            <button
+              type="button"
+              onClick={runCustom}
+              disabled={busy || query.trim().length < 12}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#09090b] px-6 py-3 text-[14px] font-semibold text-white shadow-sm hover:bg-[#27272a] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {busy ? <Spinner /> : null}
+              {busy ? 'Starting swarm...' : 'Execute swarm'}
+            </button>
+            <span className="text-[12px] text-[#71717a]">
+              The agents will use this text as the intake, not a preset.
+            </span>
+          </div>
+          {error && (
+            <p className="mt-4 text-[13px] text-red-700 bg-red-50 border border-red-200 rounded-xl p-4">
+              {error}
+            </p>
+          )}
+        </div>
+
+        <div className="p-6 lg:p-8 bg-[#fafafa]">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#a1a1aa] mb-4">
+            Execution plan
+          </div>
+          <ol className="space-y-3">
+            {SWARM_PLAN.map((step, index) => (
+              <li key={step} className="flex gap-3">
+                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white border border-[#e4e4e7] text-[11px] font-bold text-[#52525b]">
+                  {index + 1}
+                </span>
+                <span className="text-[13px] leading-relaxed text-[#52525b]">{step}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function PersonaCards() {
   const navigate = useNavigate();

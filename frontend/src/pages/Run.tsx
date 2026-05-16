@@ -19,6 +19,7 @@ import type {
 const PERSONA_META: Record<string, { emoji: string; color: string; bg: string }> = {
   jenny:   { emoji: '👩🏽‍🍳', color: '#d97706', bg: '#fef3c7' },
   jessica: { emoji: '💻',     color: '#6366f1', bg: '#ede9fe' },
+  custom:  { emoji: '🧭',     color: '#0f766e', bg: '#ccfbf1' },
 };
 
 const AGENTS = [

@@ -26,6 +26,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from sse_starlette.sse import EventSourceResponse
 
 from app.adapters import butterbase, evermind
+from app.agents.profile_agent import agent_execution_plan, profile_from_text
 from app.orchestrator import EVENT_BUS, SwarmRunner
 from app.settings import settings
 
@@ -114,6 +115,23 @@ async def start_run(payload: dict[str, Any], background_tasks: BackgroundTasks) 
     # Fire-and-forget; SSE consumer attaches to EVENT_BUS via run_id
     background_tasks.add_task(_run_safely, runner)
     return {"run_id": runner.run_id, "stream_url": f"/api/stream/{runner.run_id}"}
+
+
+@app.post("/api/run-text")
+async def start_run_from_text(payload: dict[str, Any], background_tasks: BackgroundTasks) -> dict[str, Any]:
+    query = str(payload.get("query") or "").strip()
+    if len(query) < 12:
+        raise HTTPException(400, "Describe the situation in at least one sentence")
+
+    profile = await profile_from_text(query)
+    runner = SwarmRunner(raw_profile=profile.model_dump(mode="json"))
+    background_tasks.add_task(_run_safely, runner)
+    return {
+        "run_id": runner.run_id,
+        "stream_url": f"/api/stream/{runner.run_id}",
+        "profile": profile.model_dump(mode="json"),
+        "plan": agent_execution_plan(),
+    }
 
 
 async def _run_safely(runner: SwarmRunner) -> None:
