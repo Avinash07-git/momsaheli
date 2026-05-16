@@ -88,7 +88,7 @@ export default function Home() {
 
               <div className="flex flex-wrap gap-3 mb-10">
                 <a href="#run"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#18181b] text-white font-semibold text-[14px] hover:bg-[#3f3f46] transition-colors shadow-lg">
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-amber-700 text-white font-semibold text-[14px] hover:bg-amber-800 transition-colors shadow-lg shadow-amber-900/10">
                   Run the swarm →
                 </a>
                 <a href="#how"
@@ -291,7 +291,7 @@ function CustomRunComposer() {
               type="button"
               onClick={runCustom}
               disabled={busy || query.trim().length < 12}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#09090b] px-6 py-3 text-[14px] font-semibold text-white shadow-sm hover:bg-[#27272a] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-700 px-6 py-3 text-[14px] font-semibold text-white shadow-sm hover:bg-amber-800 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {busy ? <Spinner /> : null}
               {busy ? 'Starting swarm...' : 'Execute swarm'}
@@ -395,7 +395,7 @@ function PersonaCards() {
                   <div className={clsx(
                     'w-8 h-8 rounded-full border flex items-center justify-center text-[13px] shrink-0 transition-all mt-1',
                     'border-[#e4e4e7] text-[#a1a1aa]',
-                    'group-hover:border-[#09090b] group-hover:bg-[#09090b] group-hover:text-white',
+                    'group-hover:border-amber-700 group-hover:bg-amber-700 group-hover:text-white',
                   )}>
                     →
                   </div>
