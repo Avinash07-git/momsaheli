@@ -35,9 +35,9 @@ def _persona_sources(profile: Profile) -> list[tuple[str, str, str]]:
         ]
 
     if "cooking" in skills or "meal" in skills or "baking" in skills:
-        # Food: Craigslist/FB Marketplace/Etsy via Bright Data; NO Etsy-only
+        # Food: Craigslist/FB Marketplace/Etsy via Bright Data
         return [
-            ("foodlocal", "castiron", "weekend family meal pack"),
+            ("foodlocal", "food_local", "weekend family meal pack"),
         ]
 
     # Generic fallback — queries must match available cached_scrapes/ fixture files

@@ -13,6 +13,7 @@ export type EventType =
   | 'winner_selected'
   | 'launch_packet_ready'
   | 'launch_published'
+  | 'gmail_watching'
   | 'memory_pattern'
   | 'agent_error'
   | 'run_complete';

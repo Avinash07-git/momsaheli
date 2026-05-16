@@ -212,15 +212,33 @@ async def reserve_launch_spot(slug: str, payload: dict[str, Any]) -> dict[str, A
     questions = questions_result.get("questions", [])
 
     await butterbase.save_launch_lead(slug=slug, email=email, record=record)
-    email_result = await resend_email.send_reservation_followup(
-        slug=slug, customer_email=email, record=record, questions=questions,
+
+    # Try Actionbook Gmail first — sends from the seller's own Gmail account
+    # (requires Actionbook extension installed and ACTIONBOOK_API_KEY set)
+    display_name = record.get("display_name") or "the seller"
+    gmail_result = await actionbook.send_via_gmail(
+        customer_email=email,
+        offer_name=offer_name,
+        questions=questions,
+        seller_name=display_name,
     )
+
+    # Fall back to Resend if Actionbook Gmail send didn't go live
+    email_result: dict = {"sent": False, "message_id": None}
+    if not gmail_result.get("live"):
+        email_result = await resend_email.send_reservation_followup(
+            slug=slug, customer_email=email, record=record, questions=questions,
+        )
+
+    sent = gmail_result.get("sent") or email_result.get("sent", False)
     return {
         "ok": True,
         "stored": True,
-        "email_sent": bool(email_result.get("sent")),
+        "email_sent": sent,
+        "email_provider": gmail_result.get("provider") if gmail_result.get("sent") else "resend",
         "message_id": email_result.get("message_id"),
         "questions_source": questions_result.get("session_id"),
+        "actionbook_session": gmail_result.get("session_id"),
     }
 
 

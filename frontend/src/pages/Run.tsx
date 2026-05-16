@@ -95,6 +95,8 @@ export default function Run() {
     () => events.find((e) => e.type === 'launch_published')?.data.url ?? null, [events]);
   const pattern       = useMemo<CrossUserPattern | null>(
     () => events.find((e) => e.type === 'memory_pattern')?.data.pattern ?? null, [events]);
+  const gmailWatch    = useMemo<{ slug: string; live: boolean } | null>(
+    () => events.find((e) => e.type === 'gmail_watching')?.data ?? null, [events]);
 
   const winnerOpp = useMemo<Opportunity | null>(() => {
     const passing = checks.find((c) => c.verdict === 'PASS');
@@ -567,6 +569,20 @@ export default function Run() {
               <p className="text-[14px] text-[#78716c] mt-2 mb-6 max-w-xl">
                 Real offer copy, real outreach drafts, real day-by-day plan — written by Gemini and published to the web.
               </p>
+              {gmailWatch && (
+                <div className="mb-6 flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-emerald-200 shadow-sm">
+                  <span className="text-xl shrink-0">📬</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[12px] font-bold text-emerald-800 mb-0.5">
+                      Actionbook is watching your Gmail
+                    </div>
+                    <p className="text-[11px] text-emerald-700 leading-snug">
+                      When a customer reserves a spot, Actionbook will open your Gmail and send the follow-up from your own account automatically.
+                    </p>
+                  </div>
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${gmailWatch.live ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'}`} />
+                </div>
+              )}
               {launchPacket
                 ? <LaunchPacketView packet={launchPacket} publishedUrl={publishedUrl} />
                 : <EmptyTab label="Launch packet appears once the winner is selected…" />}

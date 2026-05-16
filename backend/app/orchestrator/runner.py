@@ -17,7 +17,7 @@ from collections import defaultdict
 from datetime import datetime
 from typing import Any, AsyncIterator
 
-from app.adapters import butterbase, bright_data
+from app.adapters import actionbook, butterbase, bright_data
 from app.agents import (
     run_launch_agent,
     run_customer_leads_agent,
@@ -144,8 +144,19 @@ class SwarmRunner:
                 await asyncio.sleep(0.12)
             await self._emit("launch_packet_ready", "launch", {"packet": packet.model_dump(mode="json")})
             await asyncio.sleep(0.2)
-            await self._emit("launch_published", "launch", {"url": launch_url, "slug": launch_url.rsplit("/", 1)[-1]})
+            slug = launch_url.rsplit("/", 1)[-1]
+            await self._emit("launch_published", "launch", {"url": launch_url, "slug": slug})
             await asyncio.sleep(0.2)
+
+            # --- Actionbook: watch seller's Gmail for incoming customer reservations ---
+            gmail_watch = await actionbook.start_gmail_watch(slug, packet.offer_name)
+            await self._emit("gmail_watching", "launch", {
+                "slug": slug,
+                "session_id": gmail_watch.get("session_id", ""),
+                "filter_label": gmail_watch.get("filter_label", ""),
+                "live": gmail_watch.get("live", False),
+            })
+            await asyncio.sleep(0.15)
 
             # --- 5. Memory Agent ---
             _, pattern = await run_memory_agent(

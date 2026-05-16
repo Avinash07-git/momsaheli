@@ -24,6 +24,8 @@ log = logging.getLogger(__name__)
 
 ACTIONBOOK_API_BASE = "https://api.actionbook.dev/v1"
 PLACEHOLDER_URL_MARKERS = ("/listing/example", "example-", "example_")
+GMAIL_COMPOSE_URL = "https://mail.google.com/mail/u/0/#compose"
+
 REAL_ETSY_LINKS_BY_ID = {
     "etsy_d01": "https://www.etsy.com/listing/1751240932/lunchbox-notes-printable-lunchbox-notes",
     "etsy_d02": "https://www.etsy.com/listing/797010468/meal-planner-meal-prep-planner-meal",
@@ -155,6 +157,101 @@ async def draft_followup_questions(opportunity_category: str, offer_name: str) -
     except Exception as e:
         log.warning("actionbook.questions.fallback", extra={"err": str(e)[:200]})
         return {"questions": fallback_questions, "session_id": "fallback", "live": False}
+
+
+async def start_gmail_watch(slug: str, offer_name: str) -> dict:
+    """Use Actionbook to open Gmail and watch for incoming customer reservation emails.
+
+    When configured, Actionbook (browser extension) monitors the seller's inbox and
+    can trigger automated responses when customers reserve a spot.
+    Returns a session_id for the watching session.
+    """
+    if settings.USE_FIXTURES or not settings.ACTIONBOOK_API_KEY:
+        log.info("actionbook.gmail.watch.fixture", extra={"slug": slug})
+        return {
+            "watching": True,
+            "session_id": f"fixture-gmail-watch-{slug}",
+            "filter_label": f"reservation:{slug}",
+            "live": False,
+        }
+    try:
+        payload = {
+            "workspace_id": settings.ACTIONBOOK_WORKSPACE_ID,
+            "action": "watch_inbox",
+            "site": "mail.google.com",
+            "params": {
+                "filter_subject": offer_name,
+                "filter_label": f"reservation:{slug}",
+                "trigger_on": "new_email",
+            },
+        }
+        headers = {
+            "Authorization": f"Bearer {settings.ACTIONBOOK_API_KEY}",
+            "Content-Type": "application/json",
+        }
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.post(f"{ACTIONBOOK_API_BASE}/sessions/run", json=payload, headers=headers)
+            resp.raise_for_status()
+            body = resp.json()
+        log.info("actionbook.gmail.watch.ok", extra={"slug": slug, "session": body.get("session_id")})
+        return {
+            "watching": True,
+            "session_id": body.get("session_id", "live"),
+            "filter_label": f"reservation:{slug}",
+            "live": True,
+        }
+    except Exception as e:
+        log.warning("actionbook.gmail.watch.fallback", extra={"slug": slug, "err": str(e)[:200]})
+        return {"watching": False, "session_id": "fallback", "filter_label": f"reservation:{slug}", "live": False}
+
+
+async def send_via_gmail(
+    customer_email: str,
+    offer_name: str,
+    questions: list[str],
+    seller_name: str = "the seller",
+) -> dict:
+    """Use Actionbook to compose and send a follow-up email from the seller's Gmail.
+
+    When the Actionbook extension is installed, this drives the seller's browser to open
+    Gmail and send a personalised follow-up directly from their own account — no
+    third-party sender. Falls back gracefully when extension is absent.
+    """
+    numbered = "\n".join(f"{i + 1}. {q}" for i, q in enumerate(questions))
+    body = (
+        f"Hi! Thanks so much for your interest in {offer_name}.\n\n"
+        f"To make sure I can serve you perfectly, could you answer a few quick questions?\n\n"
+        f"{numbered}\n\n"
+        f"Just reply to this email — I'll get back to you within 24 hours.\n\n"
+        f"Looking forward to it,\n{seller_name}"
+    )
+    if settings.USE_FIXTURES or not settings.ACTIONBOOK_API_KEY:
+        log.info("actionbook.gmail.send.fixture", extra={"to": customer_email})
+        return {"sent": True, "session_id": "fixture-gmail-send", "provider": "actionbook_gmail_fixture", "live": False}
+    try:
+        payload = {
+            "workspace_id": settings.ACTIONBOOK_WORKSPACE_ID,
+            "action": "compose_send",
+            "site": "mail.google.com",
+            "params": {
+                "to": customer_email,
+                "subject": f"Your spot is reserved — {offer_name}",
+                "body": body,
+            },
+        }
+        headers = {
+            "Authorization": f"Bearer {settings.ACTIONBOOK_API_KEY}",
+            "Content-Type": "application/json",
+        }
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            resp = await client.post(f"{ACTIONBOOK_API_BASE}/sessions/run", json=payload, headers=headers)
+            resp.raise_for_status()
+            result = resp.json()
+        log.info("actionbook.gmail.send.ok", extra={"to": customer_email})
+        return {"sent": True, "session_id": result.get("session_id", "live"), "provider": "actionbook_gmail", "live": True}
+    except Exception as e:
+        log.warning("actionbook.gmail.send.fallback", extra={"to": customer_email, "err": str(e)[:200]})
+        return {"sent": False, "provider": "actionbook_gmail", "live": False}
 
 
 async def publish_launch_page(slug: str, landing_url: str) -> dict:
