@@ -1,4 +1,4 @@
-"""AgentField integration — wraps the 5-agent swarm as @reasoner endpoints.
+"""AgentField integration — wraps the 6-agent swarm as @reasoner endpoints.
 
 Run this as a standalone process alongside uvicorn:
     python -m app.agentfield_agent
@@ -25,6 +25,7 @@ from agentfield import Agent, AIConfig
 
 from app.agents import (
     run_launch_agent,
+    run_customer_leads_agent,
     run_market_scout,
     run_memory_agent,
     run_profile_agent,
@@ -74,7 +75,7 @@ af = Agent(
     agentfield_server=settings.AGENTFIELD_CONTROL_PLANE_URL,
     version="0.1.0",
     description=(
-        "5-agent swarm that surfaces realistic side-income opportunities for "
+        "6-agent swarm that surfaces realistic side-income opportunities for "
         "working moms, checks compliance against real state law, and publishes "
         "a real launch page."
     ),
@@ -87,7 +88,7 @@ af = Agent(
 
 
 # ──────────────────────────────────────────────────────────────────────────
-# 5 child reasoners — each delegates to the canonical run_*_agent function.
+# 6 child reasoners — each delegates to the canonical run_*_agent function.
 # These are independently callable (judges can curl them) AND get nested under
 # run_full_swarm when invoked from there via AgentField's contextvar tracking.
 # ──────────────────────────────────────────────────────────────────────────
@@ -127,6 +128,15 @@ async def reality_compliance_agent(raw_profile: dict, opportunities: list) -> di
     }
 
 
+@af.reasoner(tags=["leads", "customers", "buyer-intent"])
+async def customer_leads_agent(raw_profile: dict, opportunity: dict) -> dict:
+    """Find buyer-intent posts/searches from people likely to use the selected offer."""
+    profile = await run_profile_agent(raw_profile)
+    opp = Opportunity.model_validate(opportunity)
+    leads = await run_customer_leads_agent(opp, profile)
+    return {"leads": [lead.model_dump(mode="json") for lead in leads]}
+
+
 @af.reasoner(tags=["launch", "copywriting", "gemini"])
 async def launch_agent(raw_profile: dict, opportunity: dict) -> dict:
     """Generate offer + 7-day plan, publish a real landing page (Gemini + Butterbase)."""
@@ -163,15 +173,15 @@ async def memory_agent(
 
 
 # ──────────────────────────────────────────────────────────────────────────
-# Orchestrator reasoner — awaits the 5 children so the dashboard renders
+# Orchestrator reasoner — awaits the 6 children so the dashboard renders
 # a proper nested execution waterfall (THE sponsor-genuine moment).
 # ──────────────────────────────────────────────────────────────────────────
 @af.reasoner(tags=["orchestrator", "swarm", "end-to-end"])
 async def run_full_swarm(raw_profile: dict) -> dict:
-    """Run the complete 5-agent pipeline end-to-end.
+    """Run the complete 6-agent pipeline end-to-end.
 
     Calls each child @reasoner in sequence so the AgentField dashboard renders
-    one parent execution with 5 child spans, each with its own
+    one parent execution with 6 child spans, each with its own
     inputs/outputs/timings/tags. This is the 'sponsor-genuine' moment vs.
     a flat opaque call.
     """
@@ -198,10 +208,13 @@ async def run_full_swarm(raw_profile: dict) -> dict:
             "checks": compliance["checks"],
         }
 
-    # 4. Launch (offer + copy + real published page)
+    # 4. Customer leads (buyer-intent demand signals)
+    leads = await customer_leads_agent(raw_profile, winner)
+
+    # 5. Launch (offer + copy + real published page)
     launch = await launch_agent(raw_profile, winner)
 
-    # 5. Memory (persist trajectory + surface cross-user pattern)
+    # 6. Memory (persist trajectory + surface cross-user pattern)
     rejected = [o for o in opportunities if o["id"] != winner["id"]]
     memory = await memory_agent(
         run_id=run_id,
@@ -217,6 +230,7 @@ async def run_full_swarm(raw_profile: dict) -> dict:
         "status": "complete",
         "profile": profile,
         "winner": winner,
+        "customer_leads": leads["leads"],
         "launch_url": launch["launch_url"],
         "pattern": memory["pattern"],
         "compliance_summary": {

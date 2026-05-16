@@ -1,6 +1,7 @@
 """Pydantic schemas — the single source of truth for data shape."""
 from .profile import Profile
 from .evidence import EvidenceCard
+from .customer_lead import CustomerLead
 from .opportunity import Opportunity, RevenueCitation
 from .compliance import ComplianceCheck, ComplianceDimension
 from .launch_packet import LaunchPacket, OutreachDraft, DayPlanItem
@@ -10,6 +11,7 @@ from .run import RunSummary, AgentEvent
 __all__ = [
     "Profile",
     "EvidenceCard",
+    "CustomerLead",
     "Opportunity",
     "RevenueCitation",
     "ComplianceCheck",

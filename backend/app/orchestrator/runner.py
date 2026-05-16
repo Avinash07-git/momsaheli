@@ -20,6 +20,7 @@ from typing import Any, AsyncIterator
 from app.adapters import butterbase, bright_data
 from app.agents import (
     run_launch_agent,
+    run_customer_leads_agent,
     run_market_scout,
     run_memory_agent,
     run_profile_agent,
@@ -131,8 +132,16 @@ class SwarmRunner:
             await self._emit("winner_selected", "reality_compliance", {"opportunity_id": winner.id})
             await asyncio.sleep(0.2)
 
-            # --- 4. Launch Agent ---
+            # --- 4. Customer Leads + Launch Agent ---
+            # Lead discovery depends on the selected winner, but it can run in
+            # parallel with launch copywriting so the demo gets another useful
+            # agent without adding much wall-clock time.
+            lead_task = asyncio.create_task(run_customer_leads_agent(winner, profile))
             packet, launch_url = await run_launch_agent(winner, profile)
+            leads = await lead_task
+            for lead in leads:
+                await self._emit("customer_lead", "customer_leads", {"lead": lead.model_dump(mode="json")})
+                await asyncio.sleep(0.12)
             await self._emit("launch_packet_ready", "launch", {"packet": packet.model_dump(mode="json")})
             await asyncio.sleep(0.2)
             await self._emit("launch_published", "launch", {"url": launch_url, "slug": launch_url.rsplit("/", 1)[-1]})

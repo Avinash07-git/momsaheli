@@ -3,6 +3,7 @@ import { useParams, useSearchParams, Link } from 'react-router-dom';
 import clsx from 'clsx';
 import { useAgentStream } from '../hooks/useAgentStream';
 import EvidenceCard from '../components/EvidenceCard';
+import CustomerLeadCard from '../components/CustomerLeadCard';
 import ComplianceBlock from '../components/ComplianceBlock';
 import LaunchPacketView from '../components/LaunchPacketView';
 import MemoryPanel from '../components/MemoryPanel';
@@ -10,6 +11,7 @@ import type {
   AgentEvent,
   ComplianceCheck,
   CrossUserPattern,
+  CustomerLead,
   EvidenceCard as EvidenceCardT,
   LaunchPacket,
   Opportunity,
@@ -25,6 +27,7 @@ const PERSONA_META: Record<string, { emoji: string; color: string; bg: string }>
 const AGENTS = [
   { id: 'profile',            label: 'Profile Agent',        doneEvent: 'profile_ready' },
   { id: 'market_scout',       label: 'Market Scout',         doneEvent: 'opportunities_ranked' },
+  { id: 'customer_leads',      label: 'Customer Leads',       doneEvent: 'customer_lead' },
   { id: 'reality_compliance', label: 'Reality & Compliance', doneEvent: 'winner_selected' },
   { id: 'launch',             label: 'Launch Agent',         doneEvent: 'launch_published' },
   { id: 'memory',             label: 'Memory Agent',         doneEvent: 'memory_pattern' },
@@ -41,11 +44,12 @@ function agentStatus(agentId: string, events: AgentEvent[]): StepStatus {
   return 'running';
 }
 
-type TabId = 'overview' | 'evidence' | 'compliance' | 'launch' | 'memory';
+type TabId = 'overview' | 'evidence' | 'leads' | 'compliance' | 'launch' | 'memory';
 
 const TABS: { id: TabId; label: string; emoji: string; desc: string; activeColor: string; activeBg: string; idleBg: string; idleColor: string }[] = [
   { id: 'overview',    label: 'Overview',    emoji: '◈', desc: 'Profile & winner',     activeColor: '#18181b', activeBg: '#f4f4f3', idleBg: '#fafafa',  idleColor: '#78716c' },
   { id: 'evidence',   label: 'Evidence',    emoji: '📊', desc: 'Market signals',       activeColor: '#1d4ed8', activeBg: '#dbeafe', idleBg: '#eff6ff',  idleColor: '#3b82f6' },
+  { id: 'leads',      label: 'Leads',       emoji: '👥', desc: 'Customer demand',      activeColor: '#047857', activeBg: '#d1fae5', idleBg: '#ecfdf5',  idleColor: '#10b981' },
   { id: 'compliance', label: 'Compliance',  emoji: '⚖️',  desc: 'Legal checks',         activeColor: '#b91c1c', activeBg: '#fee2e2', idleBg: '#fff1f2',  idleColor: '#ef4444' },
   { id: 'launch',     label: 'Launch',      emoji: '🚀', desc: 'Ready-to-ship plan',   activeColor: '#065f46', activeBg: '#d1fae5', idleBg: '#f0fdf4',  idleColor: '#22c55e' },
   { id: 'memory',     label: 'Memory',      emoji: '🧠', desc: 'Cross-user patterns',  activeColor: '#6b21a8', activeBg: '#f3e8ff', idleBg: '#faf5ff',  idleColor: '#a855f7' },
@@ -79,6 +83,8 @@ export default function Run() {
     () => events.find((e) => e.type === 'profile_ready')?.data.profile ?? null, [events]);
   const evidenceCards = useMemo<EvidenceCardT[]>(
     () => events.filter((e) => e.type === 'evidence_card').map((e) => e.data.card), [events]);
+  const customerLeads = useMemo<CustomerLead[]>(
+    () => events.filter((e) => e.type === 'customer_lead').map((e) => e.data.lead), [events]);
   const opportunities = useMemo<Opportunity[]>(
     () => events.find((e) => e.type === 'opportunities_ranked')?.data.opportunities ?? [], [events]);
   const checks        = useMemo<ComplianceCheck[]>(
@@ -103,6 +109,7 @@ export default function Run() {
   const tabData: Record<TabId, boolean> = {
     overview:   true,
     evidence:   evidenceCards.length > 0,
+    leads:      customerLeads.length > 0,
     compliance: checks.length > 0,
     launch:     !!launchPacket,
     memory:     !!pattern,
@@ -266,6 +273,11 @@ export default function Run() {
                   <span className="font-semibold text-[#1c1917]">{evidenceCards.length}</span> signals
                 </span>
               )}
+              {customerLeads.length > 0 && (
+                <span className="text-[13px] text-[#78716c]">
+                  <span className="font-semibold text-emerald-600">{customerLeads.length}</span> leads
+                </span>
+              )}
               {blockCount > 0 && (
                 <span className="text-[13px] text-[#78716c]">
                   <span className="font-semibold text-red-600">{blockCount}</span> blocked
@@ -311,6 +323,11 @@ export default function Run() {
                     {tab.id === 'evidence' && evidenceCards.length > 0 && (
                       <span className="px-1.5 py-0.5 rounded-full bg-blue-200 text-blue-800 text-[10px] font-bold">
                         {evidenceCards.length}
+                      </span>
+                    )}
+                    {tab.id === 'leads' && customerLeads.length > 0 && (
+                      <span className="px-1.5 py-0.5 rounded-full bg-emerald-200 text-emerald-800 text-[10px] font-bold">
+                        {customerLeads.length}
                       </span>
                     )}
                     {tab.id === 'compliance' && blockCount > 0 && (
@@ -458,6 +475,24 @@ export default function Run() {
                 </div>
               ) : (
                 <EmptyTab label="Evidence cards appear as Market Scout scans the web…" />
+              )}
+            </div>
+          )}
+
+          {/* LEADS */}
+          {activeTab === 'leads' && (
+            <div className="animate-fade-in">
+              <Eyebrow success>Step 2 · Customer Leads</Eyebrow>
+              <SectionTitle success>Who might buy this</SectionTitle>
+              <p className="text-[14px] text-[#78716c] mt-2 mb-6 max-w-xl">
+                Evidence shows what similar sellers are doing. Leads show buyer-intent posts and searches from people asking for the thing she can offer.
+              </p>
+              {customerLeads.length > 0 ? (
+                <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4 max-w-5xl">
+                  {customerLeads.map((lead) => <CustomerLeadCard key={lead.id} lead={lead} />)}
+                </div>
+              ) : (
+                <EmptyTab label="Customer leads appear after the winning opportunity is selected…" />
               )}
             </div>
           )}

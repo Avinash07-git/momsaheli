@@ -2,11 +2,12 @@
 // Keep in sync when backend changes.
 
 export type Verdict = 'PASS' | 'BLOCK' | 'WARN';
-export type AgentName = 'profile' | 'market_scout' | 'reality_compliance' | 'launch' | 'memory' | 'system';
+export type AgentName = 'profile' | 'market_scout' | 'customer_leads' | 'reality_compliance' | 'launch' | 'memory' | 'system';
 export type EventType =
   | 'run_started'
   | 'profile_ready'
   | 'evidence_card'
+  | 'customer_lead'
   | 'opportunities_ranked'
   | 'compliance_check'
   | 'winner_selected'
@@ -54,6 +55,18 @@ export interface EvidenceCard {
   actionbook_session_id?: string | null;
   actionbook_session_url?: string | null;
   actionbook_screenshot_url?: string | null;
+}
+
+export interface CustomerLead {
+  id: string;
+  title: string;
+  source: 'reddit' | 'facebook_group' | 'nextdoor' | 'google' | 'local_search';
+  source_url: string;
+  intent_signal: string;
+  location_hint?: string | null;
+  suggested_outreach: string;
+  match_reason: string;
+  confidence: number;
 }
 
 export interface RevenueCitation {

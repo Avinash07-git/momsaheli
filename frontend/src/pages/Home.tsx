@@ -15,9 +15,10 @@ const STATS = [
 const AGENTS = [
   { n: 1, name: 'Profile',              color: '#64748b', desc: 'Skills, hours, budget, hard constraints — normalized in seconds.' },
   { n: 2, name: 'Market Scout',         color: '#3b82f6', desc: 'Live Etsy + Bright Data: 6–10 ranked income paths, real evidence.' },
-  { n: 3, name: 'Reality & Compliance', color: '#ef4444', desc: 'Blocks illegal paths with the actual cited state statute.' },
-  { n: 4, name: 'Launch',               color: '#10b981', desc: 'Offer + copy + 7-day plan + a real published landing page.' },
-  { n: 5, name: 'Memory',               color: '#8b5cf6', desc: 'Persists trajectory, surfaces a cross-user pattern for the next mom.' },
+  { n: 3, name: 'Customer Leads',        color: '#10b981', desc: 'Finds buyer-intent posts from people asking for this exact help.' },
+  { n: 4, name: 'Reality & Compliance', color: '#ef4444', desc: 'Blocks illegal paths with the actual cited state statute.' },
+  { n: 5, name: 'Launch',               color: '#0f766e', desc: 'Offer + copy + 7-day plan + a real published landing page.' },
+  { n: 6, name: 'Memory',               color: '#8b5cf6', desc: 'Persists trajectory, surfaces a cross-user pattern for the next mom.' },
 ];
 
 const PRESETS = [
@@ -42,6 +43,7 @@ const PRESETS = [
 const SWARM_PLAN = [
   'Profile Agent extracts skills, hours, budget, state, and constraints.',
   'Market Scout gathers live evidence and ranks income paths.',
+  'Customer Leads finds buyer-intent posts and searches.',
   'Reality & Compliance blocks unsafe or illegal options with citations.',
   'Launch Agent writes the offer, pricing, outreach, and 7-day plan.',
   'Memory Agent stores what worked for the next run.',
@@ -98,7 +100,7 @@ export default function Home() {
               </div>
 
               <div className="flex flex-wrap gap-2">
-                {['5 AI agents', '9 sponsor tools', 'Cited regulations', 'Real launch pages'].map((f) => (
+                {['6 AI agents', 'Buyer leads', 'Cited regulations', 'Real launch pages'].map((f) => (
                   <span key={f} className="px-3 py-1 rounded-full text-[11px] font-medium text-[#7c6f55] border border-amber-200 bg-white/45">
                     {f}
                   </span>
@@ -177,7 +179,7 @@ export default function Home() {
           <div className="max-w-xl mb-20">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#a1a1aa] mb-4">How it works</p>
             <h2 className="font-serif text-[40px] lg:text-[50px] font-bold text-[#09090b] leading-tight tracking-tight mb-5">
-              Five agents.<br />One mom.<br />One published page.
+              Six agents.<br />One mom.<br />One published page.
             </h2>
             <p className="text-[15px] text-[#71717a] leading-relaxed">
               Each agent does one job. Together they replace the consultant, the lawyer, the marketer, and the bookkeeper.
@@ -187,7 +189,7 @@ export default function Home() {
           {/* Connecting line + steps */}
           <div className="relative">
             <div className="hidden lg:block absolute top-7 left-7 right-7 h-px bg-[#e4e4e7]" />
-            <div className="grid lg:grid-cols-5 gap-8 lg:gap-4">
+            <div className="grid md:grid-cols-2 lg:grid-cols-6 gap-8 lg:gap-4">
               {AGENTS.map((a) => (
                 <div key={a.n} className="relative">
                   <div

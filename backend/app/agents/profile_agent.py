@@ -72,6 +72,7 @@ def agent_execution_plan() -> list[dict[str, str]]:
     return [
         {"agent": "Profile Agent", "task": "Normalize the user request into skills, hours, budget, state, and constraints."},
         {"agent": "Market Scout", "task": "Gather live market evidence and rank realistic income paths."},
+        {"agent": "Customer Leads", "task": "Find buyer-intent posts and searches from people who might use the offer."},
         {"agent": "Reality & Compliance", "task": "Check each path against time, budget, and state rules with citations."},
         {"agent": "Launch Agent", "task": "Generate the winning offer, pricing, copy, outreach, and 7-day plan."},
         {"agent": "Memory Agent", "task": "Store the trajectory and surface a reusable learning pattern."},

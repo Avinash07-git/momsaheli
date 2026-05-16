@@ -8,6 +8,7 @@ EventType = Literal[
     "run_started",
     "profile_ready",
     "evidence_card",
+    "customer_lead",
     "opportunities_ranked",
     "compliance_check",
     "winner_selected",
