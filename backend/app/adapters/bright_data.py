@@ -13,8 +13,9 @@ from __future__ import annotations
 import json
 import logging
 import re
+from html import unescape
 from pathlib import Path
-from urllib.parse import quote_plus
+from urllib.parse import parse_qs, quote_plus, unquote, urlparse
 
 import httpx
 
@@ -422,10 +423,76 @@ async def _extract_customer_leads_from_html(
             )
             if lead:
                 cleaned.append(lead)
-        return cleaned
+        if cleaned:
+            return cleaned
+        return _extract_customer_leads_deterministic(html, query, profile, opportunity, limit)
     except Exception as e:
         log.warning("bright_data.customer_extract.fail", extra={"err": str(e)[:200]})
-        return []
+        return _extract_customer_leads_deterministic(html, query, profile, opportunity, limit)
+
+
+def _extract_customer_leads_deterministic(
+    html: str,
+    query: str,
+    profile,
+    opportunity,
+    limit: int,
+) -> list[dict]:
+    """Fallback extractor for Bright Data SERP HTML when no live LLM is available."""
+    blocks = re.findall(r"<a\s+[^>]*href=[\"']([^\"']+)[\"'][^>]*>(.*?)</a>", html, flags=re.I | re.S)
+    leads: list[dict] = []
+    seen_urls: set[str] = set()
+    for href, inner in blocks:
+        url = _resolve_google_url(href)
+        if not url or url in seen_urls or not _is_safe_public_url(url):
+            continue
+        parsed = urlparse(url)
+        if any(host in parsed.netloc.lower() for host in ("google.", "gstatic.", "youtube.", "schema.org")):
+            continue
+        title = _clean_text(re.sub(r"<[^>]+>", " ", unescape(inner)), 140)
+        if len(title) < 8:
+            title = _clean_text(parsed.netloc.replace("www.", ""), 140)
+        combined = f"{title} {url} {query}"
+        source_type = _classify_customer_source(combined)
+        if source_type == "manual" and len(leads) >= max(1, limit // 2):
+            continue
+        seen_urls.add(url)
+        leads.append({
+            "id": f"bd_serp_customer_{len(leads) + 1}_{_slug(title)[:32]}",
+            "title": title,
+            "source_type": source_type,
+            "source_url": url,
+            "audience_match": (
+                f"{getattr(profile, 'city', None) or 'Local'} {getattr(profile, 'state', '')} "
+                f"parents and families connected to {getattr(opportunity, 'title', 'the offer')}"
+            ),
+            "why_relevant": (
+                "Bright Data returned this public search result for a customer-acquisition query; "
+                "review the page rules before outreach."
+            ),
+            "estimated_reach": _estimated_reach_for_source(source_type),
+            "confidence": 0.62 if source_type != "manual" else 0.48,
+            "live_source": True,
+            "provider": "bright_data",
+            "notes": "Deterministic SERP extraction; no private groups, member lists, or phone numbers collected.",
+        })
+        if len(leads) >= limit:
+            break
+    return leads
+
+
+def _resolve_google_url(href: str) -> str | None:
+    href = unescape(href)
+    if href.startswith("/url?"):
+        params = parse_qs(urlparse(href).query)
+        href = params.get("q", [""])[0]
+    elif href.startswith("https://www.google.com/url?"):
+        params = parse_qs(urlparse(href).query)
+        href = params.get("q", [""])[0]
+    href = unquote(href)
+    if not href.startswith(("http://", "https://")):
+        return None
+    return href
 
 
 async def _search_customer_leads_tavily(profile, opportunity, queries: list[str], limit: int) -> list[dict]:

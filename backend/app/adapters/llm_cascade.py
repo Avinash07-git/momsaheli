@@ -21,6 +21,7 @@ from typing import Any
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential_jitter
 
+from app.adapters import token_router
 from app.settings import settings
 
 log = logging.getLogger(__name__)
@@ -133,6 +134,20 @@ async def chat(
     """
     response_format = {"type": "json_object"} if json_mode else None
     last_err: Exception | None = None
+
+    if token_router.is_configured():
+        try:
+            log.info("llm.cascade.try", extra={"provider": "token_router"})
+            text = await token_router.chat_via_router(
+                messages=messages,
+                temperature=temperature,
+                json_mode=json_mode,
+            )
+            log.info("llm.cascade.ok", extra={"provider": "token_router", "len": len(text)})
+            return text
+        except Exception as e:
+            log.warning("llm.cascade.fail", extra={"provider": "token_router", "err": str(e)[:200]})
+            last_err = e
 
     providers: list[tuple[str, Any]] = [
         ("gemini", _try_gemini),
