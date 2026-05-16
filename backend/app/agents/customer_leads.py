@@ -1,18 +1,15 @@
 """Customer Leads Agent — finds buyer-intent signals for the selected offer."""
 from __future__ import annotations
 
-import asyncio
 import logging
 from urllib.parse import quote_plus
 
-from app.adapters import bright_data
 from app.schemas import CustomerLead, Opportunity, Profile
 
 log = logging.getLogger(__name__)
 
 # Curated real, publicly-accessible URLs — NO login required to open any of these.
-# Reddit: subreddit pages work for all users. Quora: topic pages load without login.
-# Facebook/Nextdoor: routed through Google site-search so real posts surface in results.
+# Reddit: subreddit search pages work for all users. Quora: topic pages load without login.
 _FOOD_LOCAL_FALLBACK = [
     {
         "title": "r/MealPrepSunday — 2M members sharing & requesting home-cooked meal services",
@@ -27,10 +24,10 @@ _FOOD_LOCAL_FALLBACK = [
         "intent": "Quora topic page with real questions from buyers asking how to find home cooks and meal prep services near them.",
     },
     {
-        "title": "Facebook Groups — 'home cooked meals for sale near me' (Google-indexed posts)",
-        "source": "facebook_group",
-        "url": "https://www.google.com/search?q=site:facebook.com+groups+%22home+cooked+meals%22+%22for+sale%22",
-        "intent": "Google surfaces real Facebook group posts where locals advertise and buy home-cooked meals — no login needed to browse results.",
+        "title": "r/HomeCooking — families asking where to find local home cooks",
+        "source": "reddit",
+        "url": "https://www.reddit.com/r/HomeCooking/search/?q=find+local+home+cook+meal+service&sort=top&restrict_sr=1",
+        "intent": "Reddit community where families ask how to find local home cooks, meal-prep services, and weekly meal subscriptions.",
     },
     {
         "title": "r/Frugal — parents asking for affordable healthy meal alternatives",
@@ -45,10 +42,10 @@ _FOOD_LOCAL_FALLBACK = [
         "intent": "Quora Home Cooking topic with real buyer questions about finding people who sell homemade food locally.",
     },
     {
-        "title": "Nextdoor posts — neighbors requesting home-cooked meals (Google-indexed)",
-        "source": "nextdoor",
-        "url": "https://www.google.com/search?q=site:nextdoor.com+%22home+cooked%22+%22looking+for%22",
-        "intent": "Google-indexed Nextdoor posts where real neighborhood families request local home cooks and meal prep services.",
+        "title": "r/EatCheapAndHealthy — budget families asking for home meal service options",
+        "source": "reddit",
+        "url": "https://www.reddit.com/r/EatCheapAndHealthy/search/?q=home+cooked+meal+service+delivery&sort=top&restrict_sr=1",
+        "intent": "Budget-conscious families in r/EatCheapAndHealthy asking for affordable home-cooked meal alternatives to takeout.",
     },
 ]
 
@@ -72,10 +69,10 @@ _DIGITAL_ASYNC_FALLBACK = [
         "intent": "Teachers and parents in r/Teachers searching for affordable editable templates they can personalise and reuse.",
     },
     {
-        "title": "Facebook Groups — printable downloads for moms (Google-indexed posts)",
-        "source": "facebook_group",
-        "url": "https://www.google.com/search?q=site:facebook.com+groups+%22printable%22+%22lunchbox%22+%22moms%22",
-        "intent": "Google shows real Facebook group posts where busy moms request and share printable lunchbox and planner downloads.",
+        "title": "r/Mommit — moms asking for printable lunchbox notes and planners",
+        "source": "reddit",
+        "url": "https://www.reddit.com/r/Mommit/search/?q=printable+lunchbox+notes+planner&sort=top&restrict_sr=1",
+        "intent": "Moms in r/Mommit asking for affordable printable lunchbox notes and planners to save time during the school week.",
     },
     {
         "title": "Quora topic: Digital Download — buyers looking for planners and printables",
@@ -105,10 +102,10 @@ _GENERIC_FALLBACK = [
         "intent": "Quora topic page with real buyer questions and unmet demand matching this offer.",
     },
     {
-        "title": "Facebook Groups — local demand posts (Google-indexed, no login needed)",
-        "source": "facebook_group",
-        "url": "https://www.google.com/search?q=site:facebook.com+groups+%22{query}%22",
-        "intent": "Google-indexed Facebook group posts where local buyers are asking for this type of help.",
+        "title": "Reddit — local community demand for this service",
+        "source": "reddit",
+        "url": "https://www.reddit.com/search/?q={query}+near+me+recommend&sort=top",
+        "intent": "Local Reddit threads where community members are actively requesting this type of service.",
     },
 ]
 
@@ -117,84 +114,15 @@ async def run_customer_leads_agent(opportunity: Opportunity, profile: Profile) -
     """Return people/communities likely to buy the winning offer.
 
     Evidence cards prove 'people sell this.' Customer leads prove 'people ask
-    for this.' Bright Data searches are used when configured; curated real-URL
-    fallback cards keep the demo reliable when search is unavailable.
+    for this.' We use curated real social-media URLs (Reddit subreddits, Quora
+    topic pages) so cards always open real content — not Google search redirects.
     """
-    queries = _lead_queries(opportunity, profile)
-    live_leads = await _live_leads(opportunity, profile, queries)
-    if live_leads:
-        log.info("customer_leads.live", extra={"count": len(live_leads)})
-        return live_leads[:6]
-
-    fallback = _fallback_leads(opportunity, profile)
-    log.info("customer_leads.fallback", extra={"count": len(fallback)})
-    return fallback
-
-
-async def _live_leads(opportunity: Opportunity, profile: Profile, queries: list[str]) -> list[CustomerLead]:
-    if not bright_data.is_configured():
-        return []
-    try:
-        envelopes = await asyncio.gather(
-            *(bright_data.search_web(q, max_results=3) for q in queries[:3]),
-            return_exceptions=True,
-        )
-    except Exception as e:
-        log.warning("customer_leads.search.fail", extra={"err": str(e)[:200]})
-        return []
-
-    leads: list[CustomerLead] = []
-    seen: set[str] = set()
-    for env in envelopes:
-        if isinstance(env, Exception) or not isinstance(env, dict):
-            continue
-        for result in env.get("results", [])[:3]:
-            url = result.get("url") or ""
-            if not url or url in seen:
-                continue
-            seen.add(url)
-            source = _source_from_url(url)
-            content = result.get("content") or result.get("title") or ""
-            leads.append(CustomerLead(
-                id=f"lead_{len(leads) + 1}",
-                title=(result.get("title") or _title_for(opportunity))[:140],
-                source=source,  # type: ignore[arg-type]
-                source_url=url,
-                intent_signal=_summarize_intent(content, opportunity),
-                location_hint=_location_hint(profile),
-                suggested_outreach=_suggested_outreach(opportunity, profile, source),
-                match_reason=f"Matches {opportunity.title} because it shows public demand for this kind of help.",
-                confidence=0.74 if source in {"reddit", "quora", "nextdoor", "facebook_group"} else 0.62,
-            ))
+    leads = _build_leads(opportunity, profile)
+    log.info("customer_leads.leads", extra={"count": len(leads)})
     return leads
 
 
-def _lead_queries(opportunity: Opportunity, profile: Profile) -> list[str]:
-    location = " ".join(part for part in [profile.city, profile.state] if part)
-    if opportunity.category == "food_local":
-        return [
-            f'site:reddit.com "{location}" "home cooked meals" OR "meal prep" "looking for"',
-            f'site:quora.com home cook meals delivery "{location}" OR family',
-            f'"{location}" "meal prep" "family dinners" "recommend" OR "who does"',
-        ]
-    if opportunity.category == "digital_async":
-        return [
-            'site:reddit.com parents "lunchbox" printable "looking for" OR "need"',
-            'site:quora.com "printable" "lunchbox" OR "meal planner" parents buy',
-            'site:reddit.com teachers parents "Canva template" "looking for"',
-        ]
-    if opportunity.category == "tutoring":
-        return [
-            f'site:reddit.com "{location}" tutor homework help parents "looking for"',
-            f'site:quora.com tutor "{location}" OR online parents',
-        ]
-    return [
-        f'site:reddit.com "{opportunity.title}" "need" OR "looking for"',
-        f'site:quora.com "{opportunity.title}"',
-    ]
-
-
-def _fallback_leads(opportunity: Opportunity, profile: Profile) -> list[CustomerLead]:
+def _build_leads(opportunity: Opportunity, profile: Profile) -> list[CustomerLead]:
     location = _location_hint(profile)
     query_slug = quote_plus(opportunity.title)
 
@@ -226,31 +154,8 @@ def _fallback_leads(opportunity: Opportunity, profile: Profile) -> list[Customer
     return leads
 
 
-def _source_from_url(url: str) -> str:
-    lowered = url.lower()
-    if "reddit.com" in lowered:
-        return "reddit"
-    if "quora.com" in lowered:
-        return "quora"
-    if "facebook.com" in lowered:
-        return "facebook_group"
-    if "nextdoor.com" in lowered:
-        return "nextdoor"
-    return "google"
-
-
-def _title_for(opportunity: Opportunity) -> str:
-    return f"Buyer intent for {opportunity.title}"
-
-
 def _location_hint(profile: Profile) -> str:
     return ", ".join(part for part in [profile.city, profile.state] if part) or profile.state
-
-
-def _summarize_intent(content: str, opportunity: Opportunity) -> str:
-    if not content:
-        return f"Public post/search result suggests demand for {opportunity.title}."
-    return content.strip().replace("\n", " ")[:220]
 
 
 def _suggested_outreach(opportunity: Opportunity, profile: Profile, source: str) -> str:
