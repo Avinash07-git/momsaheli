@@ -3,7 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-LeadSourceType = Literal["reddit", "facebook_group", "nextdoor", "google", "local_search"]
+LeadSourceType = Literal["reddit", "facebook_group", "nextdoor", "google", "local_search", "quora"]
 
 
 class CustomerLead(BaseModel):

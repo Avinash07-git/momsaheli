@@ -6,7 +6,7 @@ import json
 import logging
 from typing import AsyncIterator
 
-from app.adapters import actionbook, bright_data, llm_cascade, tavily
+from app.adapters import actionbook, bright_data, llm_cascade
 from app.schemas import EvidenceCard, Opportunity, Profile, RevenueCitation
 
 log = logging.getLogger(__name__)
@@ -34,16 +34,16 @@ def _persona_sources(profile: Profile) -> list[tuple[str, str, str]]:
             ("brightdata_comps", "poshmark", "digital download printable"),
         ]
 
-    if "cooking" in skills or "meal" in skills:
-        # Food: Castiron/Nextdoor/FB groups via Bright Data; NO Etsy
+    if "cooking" in skills or "meal" in skills or "baking" in skills:
+        # Food: Craigslist/FB Marketplace/Etsy via Bright Data; NO Etsy-only
         return [
             ("foodlocal", "castiron", "weekend family meal pack"),
         ]
 
-    # Generic fallback
+    # Generic fallback — queries must match available cached_scrapes/ fixture files
     return [
-        ("actionbook_etsy", "etsy", "home craft"),
-        ("brightdata_comps", "poshmark", "handmade goods"),
+        ("actionbook_etsy", "etsy", "kids lunch printable"),
+        ("brightdata_comps", "poshmark", "digital download printable"),
     ]
 
 
@@ -83,18 +83,24 @@ def _category_hints_for_profile(profile: Profile) -> list[str]:
 
 
 async def gather_revenue_benchmarks(profile: Profile) -> list[RevenueCitation]:
-    """Run REAL parallel Tavily queries for revenue-benchmark data backing our $/mo numbers.
+    """Run parallel Bright Data searches for revenue-benchmark data backing our $/mo numbers.
 
     This is what removes the 'Gemini guessed' critique — the ranking now cites public
     blog posts, survey reports, seller data with real URLs.
     """
-    if not tavily.is_configured():
+    if not bright_data.is_configured():
         return []
     hints = _category_hints_for_profile(profile)
+    state_name = profile.state  # state code is readable enough for the query
     try:
         # Fire all hint searches in parallel — typically 1-2, ~2-3s wall time
+        queries = [
+            f"average monthly revenue {h} side income working mom 2025 {state_name} "
+            f"earnings benchmark survey data report"
+            for h in hints
+        ]
         envelopes = await asyncio.gather(
-            *(tavily.search_revenue_benchmarks(h, state=profile.state) for h in hints),
+            *(bright_data.search_web(q, max_results=5) for q in queries),
             return_exceptions=True,
         )
     except Exception as e:
@@ -129,7 +135,7 @@ async def rank_opportunities(
 ) -> list[Opportunity]:
     """Use the LLM cascade to synthesize ranked opportunities from raw evidence cards.
 
-    Now grounded in REAL Tavily-fetched revenue-benchmark snippets — the Gemini call
+    Grounded in REAL Bright Data-fetched revenue-benchmark snippets — the Gemini call
     receives real numbers from real public sources and is instructed to anchor its
     estimates to those, not invent them. Each Opportunity carries the citation URLs.
     """
@@ -234,7 +240,7 @@ def _guess_requires_permit(title: str) -> bool:
 
 
 async def run_market_scout(profile: Profile) -> tuple[list[EvidenceCard], list[Opportunity]]:
-    """Full Market Scout pipeline: gather evidence + real revenue benchmarks IN PARALLEL,
+    """Full Market Scout pipeline: gather evidence + Bright Data revenue benchmarks IN PARALLEL,
     then rank with both feeding the LLM.
 
     The benchmark fan-out kills the 'Gemini hallucinated the number' critique —

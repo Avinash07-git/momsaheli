@@ -466,9 +466,26 @@ export default function Run() {
             <div className="animate-fade-in">
               <Eyebrow>Step 1 · Market Scout</Eyebrow>
               <SectionTitle>What's actually selling</SectionTitle>
-              <p className="text-[14px] text-[#78716c] mt-2 mb-6 max-w-xl">
-                Real listings from Etsy, Craigslist, Outschool & more. Each card is one live market data point used by Gemini to rank opportunities.
+              <p className="text-[14px] text-[#78716c] mt-2 max-w-xl">
+                Real listings from Etsy, Craigslist, Outschool & more. Each card is one live market data point used to rank opportunities.
               </p>
+              <div className="mt-3 mb-6 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden className="text-blue-500 shrink-0">
+                  <path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+                <span className="text-[11px] text-blue-700 font-medium">
+                  Web scraped by{' '}
+                  <a
+                    href="https://brightdata.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-bold hover:underline"
+                  >
+                    Bright Data
+                  </a>
+                  {' '}— all links open real, live sources
+                </span>
+              </div>
               {evidenceCards.length > 0 ? (
                 <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4 max-w-5xl">
                   {evidenceCards.map((c) => <EvidenceCard key={c.id} card={c} />)}
@@ -484,8 +501,12 @@ export default function Run() {
             <div className="animate-fade-in">
               <Eyebrow success>Step 2 · Customer Leads</Eyebrow>
               <SectionTitle success>Who might buy this</SectionTitle>
-              <p className="text-[14px] text-[#78716c] mt-2 mb-6 max-w-xl">
+              <p className="text-[14px] text-[#78716c] mt-2 mb-4 max-w-xl">
                 Evidence shows what similar sellers are doing. Leads show buyer-intent posts and searches from people asking for the thing she can offer.
+              </p>
+              <p className="inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1 mb-6">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                Scraped from Reddit · Quora · Facebook · Nextdoor via Bright Data — all links open real, live posts
               </p>
               {customerLeads.length > 0 ? (
                 <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4 max-w-5xl">

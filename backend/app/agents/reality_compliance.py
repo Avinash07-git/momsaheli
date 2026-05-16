@@ -1,14 +1,14 @@
 """Reality & Compliance Agent — the BLOCKER.
 
-Per opportunity, runs **N compliance dimensions in parallel** (asyncio.gather):
+Per opportunity, runs N compliance dimensions in parallel (asyncio.gather):
 1. Constraint math      — pure-function, hours/budget/preferences
-2. State cottage-food   — Tavily (real .gov)
-3. IRS self-employment  — Tavily (real IRS guidance)
-4. Platform TOS         — Tavily (real platform rules)
+2. State cottage-food   — Bright Data (real .gov page)
+3. IRS self-employment  — Bright Data web search (real IRS guidance)
+4. Platform TOS         — Bright Data web search (real platform rules)
 
 Emits one ComplianceCheck per opportunity with all dimensions attached. The winner =
 first PASS by rank. The parallel fan-out is the sponsor-genuine technical-depth
-moment: real network calls, real-life citation breadth, real `asyncio.gather`.
+moment: real network calls, real-life citation breadth, real asyncio.gather.
 """
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ import asyncio
 import logging
 from typing import AsyncIterator
 
-from app.adapters import bright_data, tavily
+from app.adapters import bright_data
 from app.schemas import ComplianceCheck, ComplianceDimension, Opportunity, Profile
 
 log = logging.getLogger(__name__)
@@ -32,14 +32,14 @@ def _hours_required_for_opportunity(opportunity: Opportunity) -> int:
     }.get(opportunity.category, 5)
     t = opportunity.title.lower()
     if any(k in t for k in ["daily", "5 days", "subscription", "every day"]):
-        base += 6  # daily commitments roughly double the weekly hours requirement
+        base += 6
     if "cater" in t:
         base += 3
     return base
 
 
 def _check_constraints(opportunity: Opportunity, profile: Profile) -> tuple[bool, list[str]]:
-    """Pure-function constraint math. No LLM needed — this is the cheap, fast, deterministic check."""
+    """Pure-function constraint math — deterministic, no LLM needed."""
     reasons: list[str] = []
     passed = True
 
@@ -94,9 +94,7 @@ def _check_legal(
     profile: Profile,
     law_data: dict | None,
 ) -> tuple[bool, str | None, str | None, str | None]:
-    """Check opportunity against the (already-fetched) state cottage-food data.
-    Returns (legal_passed, citation_url, citation_text, block_reason).
-    """
+    """Check opportunity against the (already-fetched) state cottage-food data."""
     if opportunity.category != "food_local" or law_data is None:
         return True, None, None, None
 
@@ -113,23 +111,21 @@ def _check_legal(
             citation_url,
             citation_text,
             f"BLOCKED under {profile.state} cottage-food law: this option qualifies as 'potentially hazardous food' "
-            f"requiring a Class B Retail Food Facility permit ($300\u2013$700/yr + commercial kitchen inspection). "
+            f"requiring a Class B Retail Food Facility permit ($300–$700/yr + commercial kitchen inspection). "
             f"Daily prep also exceeds her {profile.hours_per_week_available} hr/wk constraint.",
         )
 
     return True, citation_url, citation_text, None
-    return True, citation_url, citation_text, None
 
 
 async def _check_dimension_irs(opp: Opportunity, profile: Profile) -> ComplianceDimension:
-    """Real Tavily check for IRS self-employment threshold + Schedule C rules."""
-    if not tavily.is_configured():
-        return ComplianceDimension(dimension="irs_self_employment", passed=True, note="(no key)")
+    """Bright Data search for IRS self-employment threshold + Schedule C rules."""
+    if not bright_data.is_configured():
+        return ComplianceDimension(dimension="irs_self_employment", passed=True, note="(no Bright Data key)")
     try:
-        q = f"IRS Schedule C self-employment threshold side income 2025 {opp.category.replace('_',' ')}"
-        env = await tavily.search(q, max_results=2, search_depth="basic")
+        q = f"IRS Schedule C self-employment threshold side income 2025 {opp.category.replace('_', ' ')}"
+        env = await bright_data.search_web(q, max_results=2)
         top = (env.get("results") or [{}])[0]
-        # Heuristic: self-employment tax kicks in above $400 net. We flag for awareness, never BLOCK on this.
         annual_est = opp.estimated_net_monthly_usd * 12
         note = (
             f"Net ${annual_est}/yr — exceeds $400 self-employment threshold; Schedule C filing required."
@@ -149,9 +145,9 @@ async def _check_dimension_irs(opp: Opportunity, profile: Profile) -> Compliance
 
 
 async def _check_dimension_platform_tos(opp: Opportunity, profile: Profile) -> ComplianceDimension:
-    """Real Tavily check for marketplace TOS rules (Etsy/Castiron/Nextdoor)."""
-    if not tavily.is_configured():
-        return ComplianceDimension(dimension="platform_tos", passed=True, note="(no key)")
+    """Bright Data search for marketplace TOS rules (Etsy/Castiron/Nextdoor)."""
+    if not bright_data.is_configured():
+        return ComplianceDimension(dimension="platform_tos", passed=True, note="(no Bright Data key)")
     try:
         platform = {
             "digital_async": "etsy",
@@ -160,15 +156,15 @@ async def _check_dimension_platform_tos(opp: Opportunity, profile: Profile) -> C
             "tutoring":      "outschool",
             "service_local": "nextdoor",
         }.get(opp.category, "etsy")
-        q = f"{platform} seller policy prohibited items {opp.category.replace('_',' ')} terms of service 2025"
-        env = await tavily.search(q, max_results=2, search_depth="basic")
+        q = f"{platform} seller policy prohibited items {opp.category.replace('_', ' ')} terms of service 2025"
+        env = await bright_data.search_web(q, max_results=2)
         top = (env.get("results") or [{}])[0]
         return ComplianceDimension(
             dimension="platform_tos",
-            passed=True,  # informational unless we detect a clear "prohibited" hit; conservative default
+            passed=True,  # informational unless we detect a clear "prohibited" hit
             citation_url=top.get("url") or "",
             citation_text=(env.get("answer") or top.get("content", ""))[:280],
-            note=f"Reviewed {platform.title()} TOS for category fit.",
+            note=f"Reviewed {platform.title()} TOS for category fit via Bright Data.",
         )
     except Exception as e:
         log.warning("compliance.tos.fail", extra={"err": str(e)[:160]})
@@ -183,7 +179,7 @@ def _build_state_law_dimension(opp: Opportunity, law_data: dict | None, legal_pa
         passed=legal_passed,
         citation_url=cite_url or (law_data or {}).get("source_url"),
         citation_text=cite_text or (law_data or {}).get("citation_text"),
-        note="Live state-law lookup via Tavily (.gov sources prioritized).",
+        note="Live state-law lookup via Bright Data (.gov sources prioritized).",
     )
 
 
@@ -194,14 +190,10 @@ async def run_reality_compliance(
 ) -> AsyncIterator[ComplianceCheck]:
     """Yields one ComplianceCheck per opportunity, in rank order.
 
-    Per opportunity we run a **parallel compliance fan-out** via asyncio.gather:
-    state cottage-food + IRS self-employment + platform TOS — three real Tavily
+    Per opportunity runs a parallel compliance fan-out via asyncio.gather:
+    state cottage-food + IRS self-employment + platform TOS — three Bright Data
     network calls executed concurrently. Output: one ComplianceCheck with N
     ComplianceDimension citations attached.
-
-    Sequencing optimizations preserved:
-    - State-law page scraped ONCE per profile (cached in `law_data_cache`).
-    - Caller can pre-fetch via `pre_fetched_law` to overlap with the Gemini rank call.
     """
     needs_law = any(o.category == "food_local" for o in opportunities)
     law_data_cache: dict | None = pre_fetched_law
@@ -216,14 +208,12 @@ async def run_reality_compliance(
         # 2. State-law (already fetched once globally)
         legal_passed, cite_url, cite_text, block_reason = _check_legal(opp, profile, law_data_cache)
 
-        # 3. PARALLEL fan-out of secondary compliance dimensions (real Tavily calls)
+        # 3. PARALLEL fan-out of secondary compliance dimensions (Bright Data calls)
         irs_task = asyncio.create_task(_check_dimension_irs(opp, profile))
         tos_task = asyncio.create_task(_check_dimension_platform_tos(opp, profile))
 
-        # State-law dimension is built locally (no extra network call — already cached)
         state_dim = _build_state_law_dimension(opp, law_data_cache, legal_passed, cite_url, cite_text)
 
-        # Wait for the two real-network dimensions to land
         irs_dim, tos_dim = await asyncio.gather(irs_task, tos_task)
 
         if not constraint_passed:

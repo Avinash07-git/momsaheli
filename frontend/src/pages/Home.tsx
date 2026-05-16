@@ -210,7 +210,7 @@ export default function Home() {
       {/* ══════════════════════════════════════════
           RUN THE SWARM — off-white bg
           ══════════════════════════════════════════ */}
-      <section id="run" className="bg-[#fafafa] border-t border-[#f4f4f5] py-28 lg:py-36">
+      <section id="run" className="border-t border-amber-200 py-28 lg:py-36" style={{ background: 'linear-gradient(180deg, #fffdf5 0%, #fef9c3 40%, #fde68a 100%)' }}>
         <div className="max-w-7xl mx-auto px-6">
 
           <div className="text-center max-w-xl mx-auto mb-16">
@@ -226,10 +226,10 @@ export default function Home() {
 
           <CustomRunComposer />
 
-          <div className="mt-14 pt-12 border-t border-[#e4e4e7]">
+          <div className="mt-14 pt-12 border-t border-amber-300">
             <div className="text-center max-w-xl mx-auto mb-8">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#a1a1aa] mb-3">Or use a demo persona</p>
-              <p className="text-[14px] text-[#71717a] leading-relaxed">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-700 mb-3">Or use a demo persona</p>
+              <p className="text-[14px] text-amber-900/70 leading-relaxed">
                 Jenny and Jessica are fast ways to show the judging story arc.
               </p>
             </div>

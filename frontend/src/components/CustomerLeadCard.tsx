@@ -7,6 +7,7 @@ const SOURCE_BADGE: Record<CustomerLead['source'], { label: string; bg: string; 
   nextdoor:       { label: 'Nextdoor',     bg: 'bg-emerald-100', text: 'text-emerald-800' },
   google:         { label: 'Search',       bg: 'bg-amber-100',   text: 'text-amber-900' },
   local_search:   { label: 'Local Search', bg: 'bg-teal-100',    text: 'text-teal-800' },
+  quora:          { label: 'Quora',        bg: 'bg-red-100',     text: 'text-red-800' },
 };
 
 export default function CustomerLeadCard({ lead }: { lead: CustomerLead }) {
@@ -46,7 +47,11 @@ export default function CustomerLeadCard({ lead }: { lead: CustomerLead }) {
       </div>
 
       <div className="mt-4 pt-3 border-t border-ink-100 flex items-center justify-between text-xs">
-        <span className="font-semibold text-emerald-700">Open lead source ↗</span>
+        <span className="font-semibold text-emerald-700">
+          {lead.source_url.includes('google.com/search')
+            ? `Find ${badge.label} posts via Google ↗`
+            : `View on ${badge.label} ↗`}
+        </span>
         <span className="font-mono text-ink-500">{confidence}% match</span>
       </div>
     </a>

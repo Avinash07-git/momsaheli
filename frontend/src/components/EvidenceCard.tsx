@@ -64,25 +64,39 @@ export default function EvidenceCard({ card }: { card: EvidenceCardT }) {
         </div>
       )}
 
-      {sourceLink && (
-        <span
-          className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-brand-700 hover:text-brand-900"
-        >
-          {sourceLink.label}
-          <span aria-hidden>↗</span>
+      <div className="mt-4 pt-3 border-t border-ink-100 flex items-center justify-between gap-2">
+        {sourceLink ? (
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-700 group-hover:text-brand-900 transition-colors">
+            {sourceLink.label}
+            <span aria-hidden>↗</span>
+          </span>
+        ) : (
+          <span />
+        )}
+        <span className="inline-flex items-center gap-1 text-[10px] text-ink-400 font-medium shrink-0">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+            <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+          via Bright Data
         </span>
-      )}
+      </div>
     </CardTag>
   );
 }
 
-function getAvailableSourceLink(card: EvidenceCardT): { url: string; label: string; title: string } | null {
+function getAvailableSourceLink(card: EvidenceCardT): { url: string; label: string; title: string; isSearch: boolean } | null {
   const originalUrl = card.source_url?.trim();
   if (originalUrl && !isPlaceholderUrl(originalUrl)) {
+    const platformLabel = SOURCE_BADGE[card.source]?.label ?? card.source;
+    const isSearchPage = originalUrl.includes('/search') || originalUrl.includes('google.com/search');
     return {
       url: originalUrl,
-      label: 'Open listing',
-      title: 'Open original market source',
+      label: isSearchPage ? `Search on ${platformLabel}` : `View on ${platformLabel}`,
+      title: isSearchPage
+        ? `Open a live ${platformLabel} search for this market signal`
+        : `Open original ${platformLabel} listing`,
+      isSearch: isSearchPage,
     };
   }
 
@@ -93,19 +107,21 @@ function getAvailableSourceLink(card: EvidenceCardT): { url: string; label: stri
     etsy: `https://www.etsy.com/search?q=${query}`,
     poshmark: `https://poshmark.com/search?query=${query}`,
     craigslist: `https://sfbay.craigslist.org/search/sss?query=${query}`,
-    nextdoor: `https://www.google.com/search?q=${sourceQuery}`,
+    nextdoor: `https://www.google.com/search?q=site:nextdoor.com+${query}`,
     outschool: `https://outschool.com/search?q=${query}`,
-    facebook_marketplace: `https://www.google.com/search?q=${sourceQuery}`,
-    facebook_group: `https://www.google.com/search?q=${sourceQuery}`,
-    castiron: `https://www.google.com/search?q=${sourceQuery}`,
-    instagram: `https://www.google.com/search?q=${sourceQuery}`,
-    reddit: `https://www.reddit.com/search/?q=${query}`,
+    facebook_marketplace: `https://www.google.com/search?q=site:facebook.com+marketplace+${query}`,
+    facebook_group: `https://www.google.com/search?q=site:facebook.com+groups+${query}`,
+    castiron: `https://www.reddit.com/search/?q=${query}&sort=top`,
+    instagram: `https://www.instagram.com/explore/search/keyword/?q=${query}`,
+    reddit: `https://www.reddit.com/search/?q=${query}&sort=top`,
   };
 
+  const platformLabel = SOURCE_BADGE[card.source]?.label ?? card.source;
   return {
     url: searchUrlBySource[card.source],
-    label: 'Search live source',
-    title: 'Open a live search for this market signal',
+    label: `Search on ${platformLabel}`,
+    title: `Open a live ${platformLabel} search for this market signal`,
+    isSearch: true,
   };
 }
 

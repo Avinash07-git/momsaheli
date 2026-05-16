@@ -42,6 +42,8 @@ class Settings(BaseSettings):
     RESEND_API_KEY: str = ""
     RESEND_FROM_EMAIL: str = "Mom's Saheli <onboarding@resend.dev>"
     RESEND_OWNER_EMAIL: str = ""
+    # Seller notification email — receives action plans when customers respond
+    SELLER_EMAIL: str = "danhpcd2016@gmail.com"
 
     # --- Orchestration ---
     AGENTFIELD_API_KEY: str = ""

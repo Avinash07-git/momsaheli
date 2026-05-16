@@ -109,6 +109,83 @@ def _seed_pattern(run_ids: list[str]) -> CrossUserPattern:
     )
 
 
+# In-memory customer preference store (mirrors Evermind when key not set).
+_CUSTOMER_PREFERENCES: dict[str, dict[str, Any]] = {}
+
+
+async def save_customer_preference(email: str, slug: str, preferences: dict[str, Any]) -> bool:
+    """Persist a customer's intake preferences to Evermind.
+
+    Key: customer/{email}/{slug}  so the same customer across multiple offers is deduplicated.
+    The seller can query this later to understand returning customer preferences.
+    """
+    key = f"customer/{email.lower()}/{slug}"
+    record = {
+        "email": email.lower(),
+        "slug": slug,
+        "preferences": preferences,
+        "saved_at": datetime.utcnow().isoformat(),
+    }
+    _CUSTOMER_PREFERENCES[key] = record
+
+    if settings.USE_FIXTURES or not settings.EVERMIND_API_KEY:
+        log.info("evermind.customer_pref.local", extra={"email": email, "slug": slug})
+        return True
+
+    try:
+        payload = {
+            "namespace": settings.EVERMIND_NAMESPACE,
+            "key": key,
+            "value": record,
+            "metadata": {
+                "kind": "customer_preference",
+                "email": email.lower(),
+                "slug": slug,
+            },
+        }
+        headers = {
+            "Authorization": f"Bearer {settings.EVERMIND_API_KEY}",
+            "Content-Type": "application/json",
+        }
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(f"{EVERMIND_API_BASE}/memories", json=payload, headers=headers)
+            resp.raise_for_status()
+        log.info("evermind.customer_pref.ok", extra={"email": email, "slug": slug})
+        return True
+    except Exception as e:
+        log.warning("evermind.customer_pref.fallback", extra={"err": str(e)[:200]})
+        return True  # local store still succeeded
+
+
+async def get_customer_preferences(email: str) -> list[dict[str, Any]]:
+    """Retrieve all known preferences for a customer email across offers."""
+    prefix = f"customer/{email.lower()}/"
+    local = [v for k, v in _CUSTOMER_PREFERENCES.items() if k.startswith(prefix)]
+
+    if settings.USE_FIXTURES or not settings.EVERMIND_API_KEY:
+        return local
+
+    try:
+        payload = {
+            "namespace": settings.EVERMIND_NAMESPACE,
+            "query": f"customer preferences email:{email.lower()}",
+            "top_k": 10,
+            "filter": {"kind": "customer_preference", "email": email.lower()},
+        }
+        headers = {
+            "Authorization": f"Bearer {settings.EVERMIND_API_KEY}",
+            "Content-Type": "application/json",
+        }
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(f"{EVERMIND_API_BASE}/memories/search", json=payload, headers=headers)
+            resp.raise_for_status()
+            results = resp.json().get("results", [])
+        return [r.get("value", {}) for r in results] or local
+    except Exception as e:
+        log.warning("evermind.customer_prefs.fail", extra={"err": str(e)[:200]})
+        return local
+
+
 def trajectories_for_history() -> list[dict[str, Any]]:
     """Read all local trajectories — used by /api/runs."""
     return [

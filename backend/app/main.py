@@ -26,7 +26,8 @@ from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from sse_starlette.sse import EventSourceResponse
 
-from app.adapters import butterbase, evermind, resend_email
+from app.adapters import actionbook, butterbase, evermind, resend_email
+from app.adapters.llm_cascade import chat_json as llm_chat_json
 from app.agents.profile_agent import agent_execution_plan, profile_from_text
 from app.orchestrator import EVENT_BUS, SwarmRunner
 from app.settings import settings
@@ -203,14 +204,186 @@ async def reserve_launch_spot(slug: str, payload: dict[str, Any]) -> dict[str, A
     if not record:
         raise HTTPException(404, "Launch page not found")
 
+    # Use Actionbook to draft personalized intake questions for this offer's category
+    packet = record.get("packet", {})
+    category = packet.get("category") or "food_local"
+    offer_name = packet.get("offer_name") or "this offer"
+    questions_result = await actionbook.draft_followup_questions(category, offer_name)
+    questions = questions_result.get("questions", [])
+
     await butterbase.save_launch_lead(slug=slug, email=email, record=record)
-    email_result = await resend_email.send_reservation_followup(slug=slug, customer_email=email, record=record)
+    email_result = await resend_email.send_reservation_followup(
+        slug=slug, customer_email=email, record=record, questions=questions,
+    )
     return {
         "ok": True,
         "stored": True,
         "email_sent": bool(email_result.get("sent")),
         "message_id": email_result.get("message_id"),
+        "questions_source": questions_result.get("session_id"),
     }
+
+
+@app.get("/launch/{slug}/respond", response_class=HTMLResponse)
+async def customer_response_page(slug: str, e: str = "") -> HTMLResponse:
+    """Form page where the customer fills out their intake preferences."""
+    record = await butterbase.get_launch_page(slug)
+    if not record:
+        raise HTTPException(404, "Launch page not found")
+
+    packet = record.get("packet", {})
+    category = packet.get("category") or "food_local"
+    offer_name = packet.get("offer_name") or "this offer"
+    display_name = record.get("display_name") or "the seller"
+
+    questions_result = await actionbook.draft_followup_questions(category, offer_name)
+    questions = questions_result.get("questions", [])
+
+    template = _jinja.get_template("customer_response.html")
+    html = template.render(
+        slug=slug,
+        customer_email=e,
+        offer_name=offer_name,
+        display_name=display_name,
+        questions=questions,
+    )
+    return HTMLResponse(html)
+
+
+@app.post("/api/launch/{slug}/customer-response")
+async def submit_customer_response(
+    slug: str, payload: dict[str, Any], background_tasks: BackgroundTasks,
+) -> dict[str, Any]:
+    """Process a customer's intake response.
+
+    1. Parse preferences from the submitted answers
+    2. Store preferences in Evermind (memory by customer email)
+    3. Generate a seller action plan via LLM
+    4. Email the plan to the seller (SELLER_EMAIL)
+    """
+    email = str(payload.get("email") or "").strip().lower()
+    raw_response = str(payload.get("response") or "").strip()
+    if not raw_response:
+        raise HTTPException(400, "Response cannot be empty")
+
+    record = await butterbase.get_launch_page(slug)
+    if not record:
+        raise HTTPException(404, "Launch page not found")
+
+    packet = record.get("packet", {})
+    offer_name = packet.get("offer_name") or "this offer"
+    display_name = record.get("display_name") or "the seller"
+
+    # Parse structured preferences from the free-text response
+    preferences = await _parse_customer_preferences(raw_response, email)
+
+    # Save to Evermind — memory keyed by customer email
+    background_tasks.add_task(evermind.save_customer_preference, email, slug, preferences)
+
+    # Generate seller action plan
+    plan_text = await _generate_seller_plan(offer_name, display_name, preferences, packet)
+
+    # Email the plan to the seller
+    email_result = await resend_email.send_seller_action_plan(
+        slug=slug,
+        customer_email=email or "anonymous customer",
+        offer_name=offer_name,
+        plan_text=plan_text,
+        preferences=preferences,
+    )
+
+    return {
+        "ok": True,
+        "plan_sent": bool(email_result.get("sent")),
+        "message_id": email_result.get("message_id"),
+    }
+
+
+async def _parse_customer_preferences(raw_response: str, email: str) -> dict[str, Any]:
+    """Extract structured preferences from free-text customer response via LLM."""
+    try:
+        result = await llm_chat_json(
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You parse a customer's free-text response into structured fields. "
+                        "Return JSON with these keys (use null if not mentioned): "
+                        "{\"dietary_restrictions\": str|null, \"quantity\": str|null, "
+                        "\"deadline\": str|null, \"special_requests\": str|null}"
+                    ),
+                },
+                {"role": "user", "content": raw_response},
+            ],
+            temperature=0.1,
+        )
+    except Exception:
+        result = {}
+
+    from datetime import datetime
+    return {
+        "raw_response": raw_response,
+        "email": email,
+        "dietary_restrictions": result.get("dietary_restrictions"),
+        "quantity": result.get("quantity"),
+        "deadline": result.get("deadline"),
+        "special_requests": result.get("special_requests"),
+        "submitted_at": datetime.utcnow().isoformat(),
+    }
+
+
+async def _generate_seller_plan(
+    offer_name: str, display_name: str, preferences: dict, packet: dict
+) -> str:
+    """Generate a concrete action plan for the seller based on the customer's response."""
+    day_plan = packet.get("day_plan") or []
+    day_plan_text = "\n".join(
+        f"  Day {item.get('day')}: {item.get('action')} (~{item.get('estimated_minutes', 30)} min)"
+        for item in day_plan[:5]
+        if isinstance(item, dict)
+    )
+    try:
+        result = await llm_chat_json(
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You write a short, actionable seller action plan in plain text (no markdown). "
+                        "Keep it under 250 words. Use bullet points with a dash. "
+                        "Return JSON: {\"plan\": str}"
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"Seller: {display_name}\n"
+                        f"Offer: {offer_name}\n"
+                        f"Customer dietary restrictions: {preferences.get('dietary_restrictions') or 'none stated'}\n"
+                        f"Quantity: {preferences.get('quantity') or 'not specified'}\n"
+                        f"Deadline: {preferences.get('deadline') or 'flexible'}\n"
+                        f"Special requests: {preferences.get('special_requests') or 'none'}\n"
+                        f"Existing day plan:\n{day_plan_text}\n\n"
+                        "Write a clear action plan for the seller to fulfill this specific customer order."
+                    ),
+                },
+            ],
+            temperature=0.3,
+        )
+        return str(result.get("plan") or "").strip()
+    except Exception:
+        # Deterministic fallback
+        deadline = preferences.get("deadline") or "as soon as possible"
+        restr = preferences.get("dietary_restrictions") or "none"
+        qty = preferences.get("quantity") or "standard amount"
+        return (
+            f"Action plan for {offer_name}:\n"
+            f"- Customer deadline: {deadline}\n"
+            f"- Dietary restrictions: {restr}\n"
+            f"- Quantity: {qty}\n"
+            f"- Special requests: {preferences.get('special_requests') or 'none'}\n"
+            f"- Next step: Confirm the order details and begin prep.\n"
+            f"- Reach out to the customer at {preferences.get('email', 'their email')} to confirm."
+        )
 
 
 def _looks_like_email(value: str) -> bool:
