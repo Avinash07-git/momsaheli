@@ -42,12 +42,12 @@ function agentStatus(agentId: string, events: AgentEvent[]): StepStatus {
 
 type TabId = 'overview' | 'evidence' | 'compliance' | 'launch' | 'memory';
 
-const TABS: { id: TabId; label: string; emoji: string; desc: string; activeColor: string; activeBg: string }[] = [
-  { id: 'overview',    label: 'Overview',    emoji: '◈', desc: 'Profile & winner',         activeColor: '#18181b',  activeBg: '#f4f4f3' },
-  { id: 'evidence',   label: 'Evidence',    emoji: '📊', desc: 'Market signals',           activeColor: '#1d4ed8',  activeBg: '#dbeafe' },
-  { id: 'compliance', label: 'Compliance',  emoji: '⚖️',  desc: 'Legal checks',             activeColor: '#b91c1c',  activeBg: '#fee2e2' },
-  { id: 'launch',     label: 'Launch',      emoji: '🚀', desc: 'Ready-to-ship plan',       activeColor: '#065f46',  activeBg: '#d1fae5' },
-  { id: 'memory',     label: 'Memory',      emoji: '🧠', desc: 'Cross-user patterns',      activeColor: '#6b21a8',  activeBg: '#f3e8ff' },
+const TABS: { id: TabId; label: string; emoji: string; desc: string; activeColor: string; activeBg: string; idleBg: string; idleColor: string }[] = [
+  { id: 'overview',    label: 'Overview',    emoji: '◈', desc: 'Profile & winner',     activeColor: '#18181b', activeBg: '#f4f4f3', idleBg: '#fafafa',  idleColor: '#78716c' },
+  { id: 'evidence',   label: 'Evidence',    emoji: '📊', desc: 'Market signals',       activeColor: '#1d4ed8', activeBg: '#dbeafe', idleBg: '#eff6ff',  idleColor: '#3b82f6' },
+  { id: 'compliance', label: 'Compliance',  emoji: '⚖️',  desc: 'Legal checks',         activeColor: '#b91c1c', activeBg: '#fee2e2', idleBg: '#fff1f2',  idleColor: '#ef4444' },
+  { id: 'launch',     label: 'Launch',      emoji: '🚀', desc: 'Ready-to-ship plan',   activeColor: '#065f46', activeBg: '#d1fae5', idleBg: '#f0fdf4',  idleColor: '#22c55e' },
+  { id: 'memory',     label: 'Memory',      emoji: '🧠', desc: 'Cross-user patterns',  activeColor: '#6b21a8', activeBg: '#f3e8ff', idleBg: '#faf5ff',  idleColor: '#a855f7' },
 ];
 
 export default function Run() {
@@ -287,46 +287,44 @@ export default function Run() {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => ready && setActiveTab(tab.id)}
-                  disabled={!ready}
+                  onClick={() => setActiveTab(tab.id)}
                   className={clsx(
-                    'group flex flex-col items-start px-5 py-3.5 rounded-t-xl border-b-2 min-w-[110px] transition-all duration-150 whitespace-nowrap',
-                    active
-                      ? 'border-b-2 bg-white'
-                      : ready
-                        ? 'border-transparent bg-transparent hover:bg-[#f5f5f4]'
-                        : 'border-transparent opacity-40 cursor-not-allowed',
+                    'group flex flex-col items-start px-5 py-3.5 rounded-t-xl border-b-2 min-w-[120px] transition-all duration-150 whitespace-nowrap',
+                    active ? 'border-b-2' : 'border-transparent hover:brightness-95',
                   )}
-                  style={active ? { borderBottomColor: tab.activeColor } : { borderBottomColor: 'transparent' }}
+                  style={{
+                    background: active ? tab.activeBg : tab.idleBg,
+                    borderBottomColor: active ? tab.activeColor : 'transparent',
+                  }}
                 >
                   <div className="flex items-center gap-2 mb-0.5">
-                    <span
-                      className={clsx(
-                        'inline-flex items-center justify-center w-7 h-7 rounded-lg text-[14px] transition-all',
-                        active ? 'shadow-sm' : '',
-                      )}
-                      style={active ? { background: tab.activeBg } : { background: '#f5f5f4' }}
-                    >
+                    <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-[14px] bg-white/60 shadow-sm">
                       {tab.emoji}
                     </span>
                     <span
                       className="text-[14px] font-semibold transition-colors"
-                      style={{ color: active ? tab.activeColor : '#78716c' }}
+                      style={{ color: active ? tab.activeColor : tab.idleColor }}
                     >
                       {tab.label}
                     </span>
                     {tab.id === 'evidence' && evidenceCards.length > 0 && (
-                      <span className="px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold">
+                      <span className="px-1.5 py-0.5 rounded-full bg-blue-200 text-blue-800 text-[10px] font-bold">
                         {evidenceCards.length}
                       </span>
                     )}
                     {tab.id === 'compliance' && blockCount > 0 && (
-                      <span className="px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-bold">
+                      <span className="px-1.5 py-0.5 rounded-full bg-red-200 text-red-800 text-[10px] font-bold">
                         {blockCount}
                       </span>
                     )}
+                    {!ready && (
+                      <span className="w-1.5 h-1.5 rounded-full animate-pulse inline-block"
+                        style={{ background: tab.idleColor, opacity: 0.5 }} />
+                    )}
                   </div>
-                  <span className="text-[11px] text-[#a8a29e] font-medium pl-9">{tab.desc}</span>
+                  <span className="text-[11px] font-medium pl-9" style={{ color: tab.idleColor, opacity: active ? 1 : 0.7 }}>
+                    {ready ? tab.desc : 'Waiting…'}
+                  </span>
                 </button>
               );
             })}
