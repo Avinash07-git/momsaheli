@@ -8,12 +8,12 @@
 
 ## 0. 🚦 Session-resume snapshot (read THIS box first)
 
-**Last session ended:** 2026-05-16, end of Day 1.  
-**Backend running?** No (was running locally; restart with the command in §7).  
-**Frontend running?** No.  
+**Last session ended:** 2026-05-16, end of Day 1 (second laptop session).  
+**Backend running?** No — restart with `./scripts/start.sh` (see §7).  
+**Frontend running?** No — same, `./scripts/start.sh` starts everything.  
 **Repo clean + pushed?** Yes — all changes on `main`.
 
-**What we shipped this session (commits b703d84 → 3bce0d5):**
+**What we shipped Day 1 session 1 (commits b703d84 → 3bce0d5):**
 1. ✅ Real Gemini 2.5 Flash wired into LLM cascade (`google-generativeai` SDK, JSON mode)
 2. ✅ Real Tavily SERP wired as Bright Data stand-in (free 1000/mo tier)
 3. ✅ Cached state-law scrape per profile (Tavily calls 3 → 1)
@@ -22,17 +22,29 @@
 6. ✅ Brain-transplant docs: this file + accurate README + scripts/setup.sh
 7. ✅ Folder cleanup: planning docs moved into `docs/` + `docs/legacy/`
 
+**What we shipped Day 1 session 2 (this laptop):**
+8. ✅ AgentField `af` CLI installed (`~/.agentfield/bin/af`)
+9. ✅ `backend/app/agentfield_agent.py` — 6 `@reasoner` endpoints registered:
+   - `profile_agent`, `market_scout`, `reality_compliance_agent`, `launch_agent`, `memory_agent`, `run_full_swarm`
+10. ✅ `scripts/start.sh` — one command starts all 4 processes (af server :8080, FastAPI :8000, AF agent :8001, frontend :5173)
+11. ✅ AgentField dashboard verified live at `http://localhost:8080/ui/` with 1 agent, 6 reasoners
+
 **Verified end-to-end:** Jenny run = 6 opps ranked by real Gemini, 3 BLOCKs with real 
 `.gov` citation URLs from Tavily, real Gemini-written launch page at 
 `/launch/jenny-jenny-s-weekend-family-dinners`. Total run time ~38s (real LLM latency).
 
-**👉 Exact next action when Avinash returns:** answer one of these 3 open decisions 
-(see §9). Leading candidates: **AgentField hybrid wrap** (lights up `:8080` dashboard, 
-low risk) and **`gemini-2.5-flash-lite` swap** (~38s → ~15s).
+**👉 Exact next actions at hackathon Day 2:**
+1. Grab **Actionbook key** at booth → paste `ACTIONBOOK_API_KEY` + `ACTIONBOOK_WORKSPACE_ID` into `.env` → live browser actions activate
+2. Grab **Qwen Cloud key** at booth → paste `QWEN_API_KEY` into `.env` → cascade promotes Qwen to primary LLM
+3. Grab **Bright Data zone** at booth → paste `BRIGHT_DATA_ZONE` into `.env` → swap from Tavily in 1 line
+4. **Deploy to Zeabur** — non-negotiable for judging ("must be live, not localhost"). Code: `BUILDER0516` at zeabur.com/events
 
-**Tomorrow-morning booth runs:**
-- Bright Data → free Web Unlocker zone → set `BRIGHT_DATA_ZONE=` in `.env` → done
-- Qwen Cloud → grab key → paste into `.env` → cascade auto-promotes Qwen to primary
+**Booth credit codes (don't lose these):**
+- Butterbase: `FUN0516` at butterbase.ai (click "grab a slice") — $20 credit
+- Zeabur: `BUILDER0516` at zeabur.com/events — only available during hackathon day
+- Nosana GPU credits: theaibuilders.dev/nosanacredits
+- Qwen credits: tinyurl.com/qwencloudcredits
+- Qoder credits: tinyurl.com/qodercredits
 
 ---
 
@@ -83,10 +95,9 @@ SSE to the React frontend, and writes a real launch page to `/launch/{slug}`.
 - **TokenRouter** adapter (activates on `TOKEN_ROUTER_API_KEY`)
 - **Actionbook**, **Evermind**, **Butterbase** — adapters exist, key checks gate them, fixtures cover the path
 
-### ⏳ Planned but not built yet
-- **AgentField refactor** — SDK installed; need to wrap orchestrator as `@reasoner`(s)
-  to light up the `:8080` control-plane dashboard. Open question: full split (5 reasoners)
-  vs. hybrid wrap (1 reasoner).
+### ✅ Built and verified this session
+- **AgentField** — `af` CLI installed; `agentfield_agent.py` wraps all 5 agents as 6 `@reasoner`s;
+  dashboard live at `http://localhost:8080/ui/`; `scripts/start.sh` boots the full stack.
 - **Demo polish** — sponsor logo badges on each timeline event, citation tooltips
 - **Backup demo video** — Loom recording for "internet died on stage" insurance
 
