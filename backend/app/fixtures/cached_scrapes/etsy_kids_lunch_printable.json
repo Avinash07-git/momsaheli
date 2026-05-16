@@ -1,0 +1,56 @@
+{
+  "session_id": "ab_fixture_lunch_printable",
+  "screenshot_url": null,
+  "query": "kids lunch printable",
+  "site": "etsy.com",
+  "listings": [
+    {
+      "id": "etsy_d01",
+      "title": "Printable Lunchbox Notes — 30 cards",
+      "source": "etsy",
+      "source_url": "https://www.etsy.com/listing/example-lunch-notes",
+      "observed_price_usd": 6.0,
+      "observed_volume_signal": "180 sold last month",
+      "estimated_gross_monthly_usd": 540,
+      "estimated_net_monthly_usd": 480,
+      "time_to_first_dollar_days": 5,
+      "notes": "High-volume digital — instant delivery, no shipping, no inventory"
+    },
+    {
+      "id": "etsy_d02",
+      "title": "Kids Lunchbox Meal Plan — 4-week printable PDF",
+      "source": "etsy",
+      "source_url": "https://www.etsy.com/listing/example-meal-plan",
+      "observed_price_usd": 12.0,
+      "observed_volume_signal": "65 sold last month",
+      "estimated_gross_monthly_usd": 780,
+      "estimated_net_monthly_usd": 690,
+      "time_to_first_dollar_days": 7,
+      "notes": "Higher price point, evergreen seller"
+    },
+    {
+      "id": "etsy_d03",
+      "title": "School Lunch Idea Cards — printable, editable",
+      "source": "etsy",
+      "source_url": "https://www.etsy.com/listing/example-idea-cards",
+      "observed_price_usd": 8.0,
+      "observed_volume_signal": "110 sold last month",
+      "estimated_gross_monthly_usd": 880,
+      "estimated_net_monthly_usd": 770,
+      "time_to_first_dollar_days": 5,
+      "notes": "Editable in Canva — strong differentiator"
+    },
+    {
+      "id": "etsy_d04",
+      "title": "Bento Box Lunch Planner — bundle of 5 printables",
+      "source": "etsy",
+      "source_url": "https://www.etsy.com/listing/example-bento-planner",
+      "observed_price_usd": 18.0,
+      "observed_volume_signal": "42 sold last month",
+      "estimated_gross_monthly_usd": 756,
+      "estimated_net_monthly_usd": 670,
+      "time_to_first_dollar_days": 7,
+      "notes": "Bundle pricing — higher AOV"
+    }
+  ]
+}

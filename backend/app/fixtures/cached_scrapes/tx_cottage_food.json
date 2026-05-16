@@ -1,0 +1,18 @@
+{
+  "source_url": "https://www.dshs.texas.gov/foods-drugs-medical-devices/cottage-food-production-operations",
+  "state": "TX",
+  "citation_text": "Texas Cottage Food Law (Health & Safety Code Chapter 437) — permits home-based food businesses to sell directly to consumers without a permit, but restricts to non-potentially-hazardous foods. Digital products (e.g. printable meal plans, lunchbox templates) are out of scope for food law entirely; standard sales-tax registration applies above $1,200 annual revenue.",
+  "requires_permit_for_hot_food": true,
+  "class_a_allowed_examples": [
+    "Baked goods (non-cream-filled)",
+    "Jams, jellies",
+    "Dried herbs and seasonings",
+    "Roasted coffee beans",
+    "Digital products — no food regulation"
+  ],
+  "class_b_required_examples": [
+    "Hot prepared meal delivery",
+    "Catering",
+    "Refrigerated meal subscriptions"
+  ]
+}

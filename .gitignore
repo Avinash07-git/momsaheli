@@ -1,0 +1,41 @@
+# env / secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# node
+node_modules/
+dist/
+build/
+.vite/
+*.log
+npm-debug.log*
+
+# os
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# runtime
+*.sqlite
+*.sqlite3
+*.db
+.local/
+logs/
+backend/app/_local_store/

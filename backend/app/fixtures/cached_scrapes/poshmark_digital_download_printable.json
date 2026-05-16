@@ -1,0 +1,26 @@
+[
+  {
+    "id": "posh_d01",
+    "title": "Digital Wedding Planner Template",
+    "source": "poshmark",
+    "source_url": "https://poshmark.com/listing/example-wedding",
+    "observed_price_usd": 15.0,
+    "observed_volume_signal": "instant download — 90+ sold",
+    "estimated_gross_monthly_usd": 450,
+    "estimated_net_monthly_usd": 400,
+    "time_to_first_dollar_days": 7,
+    "notes": "Confirms digital-template demand on resale marketplaces"
+  },
+  {
+    "id": "posh_d02",
+    "title": "Printable Budget Tracker Bundle",
+    "source": "poshmark",
+    "source_url": "https://poshmark.com/listing/example-budget",
+    "observed_price_usd": 9.0,
+    "observed_volume_signal": "instant download — 200+ sold",
+    "estimated_gross_monthly_usd": 540,
+    "estimated_net_monthly_usd": 480,
+    "time_to_first_dollar_days": 5,
+    "notes": "Highest-velocity digital category"
+  }
+]

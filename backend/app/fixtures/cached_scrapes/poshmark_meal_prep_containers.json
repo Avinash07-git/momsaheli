@@ -1,0 +1,26 @@
+[
+  {
+    "id": "posh_001",
+    "title": "Glass Meal Prep Containers (set of 10)",
+    "source": "poshmark",
+    "source_url": "https://poshmark.com/listing/example-containers",
+    "observed_price_usd": 28.0,
+    "observed_volume_signal": "sold within 3 days",
+    "estimated_gross_monthly_usd": 280,
+    "estimated_net_monthly_usd": 110,
+    "time_to_first_dollar_days": 14,
+    "notes": "Resale arbitrage option — low margin, requires inventory"
+  },
+  {
+    "id": "posh_002",
+    "title": "Meal Prep Recipe Binder + Stickers",
+    "source": "poshmark",
+    "source_url": "https://poshmark.com/listing/example-binder",
+    "observed_price_usd": 22.0,
+    "observed_volume_signal": "sold within 7 days",
+    "estimated_gross_monthly_usd": 220,
+    "estimated_net_monthly_usd": 165,
+    "time_to_first_dollar_days": 10,
+    "notes": "Niche but consistent buyer"
+  }
+]

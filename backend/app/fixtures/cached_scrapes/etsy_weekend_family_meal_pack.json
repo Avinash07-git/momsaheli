@@ -1,0 +1,56 @@
+{
+  "session_id": "ab_fixture_meal_pack",
+  "screenshot_url": null,
+  "query": "weekend family meal pack",
+  "site": "etsy.com",
+  "listings": [
+    {
+      "id": "etsy_001",
+      "title": "Daily Tiffin Lunch Delivery — 5 days/wk",
+      "source": "etsy",
+      "source_url": "https://www.etsy.com/listing/example-daily-tiffin",
+      "observed_price_usd": 75.0,
+      "observed_volume_signal": "8 reviews in past 30 days",
+      "estimated_gross_monthly_usd": 1500,
+      "estimated_net_monthly_usd": 850,
+      "time_to_first_dollar_days": 21,
+      "notes": "High gross but daily prep + hot delivery — flagged for compliance check"
+    },
+    {
+      "id": "etsy_002",
+      "title": "Weekend Family Meal Pack — 4 servings, preorder",
+      "source": "etsy",
+      "source_url": "https://www.etsy.com/listing/example-meal-pack",
+      "observed_price_usd": 50.0,
+      "observed_volume_signal": "23 sold last month",
+      "estimated_gross_monthly_usd": 600,
+      "estimated_net_monthly_usd": 420,
+      "time_to_first_dollar_days": 7,
+      "notes": "Preorder model — qualifies for Class A cottage food in most states"
+    },
+    {
+      "id": "etsy_003",
+      "title": "Kids Birthday Party Mini-Catering Boxes",
+      "source": "etsy",
+      "source_url": "https://www.etsy.com/listing/example-kids-party",
+      "observed_price_usd": 120.0,
+      "observed_volume_signal": "4 sold last month",
+      "estimated_gross_monthly_usd": 480,
+      "estimated_net_monthly_usd": 290,
+      "time_to_first_dollar_days": 14,
+      "notes": "Higher margin per order but lower volume"
+    },
+    {
+      "id": "etsy_004",
+      "title": "Custom Lunchbox Meal-Prep Subscription",
+      "source": "etsy",
+      "source_url": "https://www.etsy.com/listing/example-lunchbox-sub",
+      "observed_price_usd": 95.0,
+      "observed_volume_signal": "12 active subscribers",
+      "estimated_gross_monthly_usd": 1140,
+      "estimated_net_monthly_usd": 620,
+      "time_to_first_dollar_days": 28,
+      "notes": "Refrigerated subscription — likely requires Class B permit"
+    }
+  ]
+}

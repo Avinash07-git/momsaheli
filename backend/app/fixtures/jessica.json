@@ -1,0 +1,13 @@
+{
+  "persona_id": "jessica",
+  "display_name": "Jessica",
+  "day_job": "Customer service rep (WFH, full-time)",
+  "income_gap_monthly_usd": 400,
+  "hours_per_week_available": 3,
+  "skills": ["meal planning", "Canva", "kids lunch ideas", "writing"],
+  "budget_startup_usd": 20,
+  "state": "TX",
+  "city": "Austin",
+  "hard_constraints": ["no_phone_calls", "no_delivery", "no_inventory", "fully_async"],
+  "notes": "Wants something purely digital. One school-age kid. Comfortable on a laptop after work."
+}

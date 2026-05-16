@@ -1,0 +1,19 @@
+{
+  "source_url": "https://www.cdph.ca.gov/Programs/CEH/DFDCS/Pages/FDBPrograms/FoodSafetyProgram/CottageFoodOperations.aspx",
+  "state": "CA",
+  "citation_text": "California Health & Safety Code §113758 & §114365 — Cottage Food Operations (CFOs) may produce only 'non-potentially hazardous foods' as defined in §113871. Hot prepared meals (e.g. daily tiffin / hot lunch delivery) contain time/temperature-controlled-for-safety (TCS) ingredients and DO NOT qualify for CFO. They require a full Retail Food Facility Health Permit (Class B inspection), a commercial-kitchen build-out, an annual permit fee (~$300–$700), and a 45-day initial inspection cycle.",
+  "requires_permit_for_hot_food": true,
+  "class_a_allowed_examples": [
+    "Weekend baked goods (bread, muffins, cookies)",
+    "Jams, jellies, preserves",
+    "Granola, dry mixes",
+    "Roasted nuts and coffee",
+    "Pre-packaged weekend meal-pack PREORDERS where food is not hot at hand-off"
+  ],
+  "class_b_required_examples": [
+    "Daily hot lunch delivery (tiffin)",
+    "Catering with on-site service",
+    "Refrigerated meal subscriptions",
+    "Anything served at >135°F at hand-off"
+  ]
+}
