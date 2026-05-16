@@ -175,6 +175,8 @@ export default function Run() {
             url={meta.scrapeUrl}
             title={meta.scrapeTitle}
             active={marketBusy || evidenceCards.length > 0}
+            liveUrl={evidenceCards.find((c) => c.actionbook_session_url)?.actionbook_session_url ?? null}
+            screenshotUrl={evidenceCards.find((c) => c.actionbook_screenshot_url)?.actionbook_screenshot_url ?? null}
           >
             {evidenceCards.length === 0 ? (
               <ScrapeSkeleton label="Scraping market comps…" />

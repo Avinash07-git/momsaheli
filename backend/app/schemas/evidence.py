@@ -27,3 +27,11 @@ class EvidenceCard(BaseModel):
     estimated_net_monthly_usd: int = Field(..., description="After platform fee + materials")
     time_to_first_dollar_days: int
     notes: str = ""
+    # Actionbook-provided live session fields — when present, the UI swaps the
+    # placeholder BrowserFrame for a real iframe of the live browser session.
+    actionbook_session_id: str | None = None
+    actionbook_session_url: str | None = Field(
+        default=None,
+        description="Embeddable URL of the live Actionbook browser session (renders in <iframe>)",
+    )
+    actionbook_screenshot_url: str | None = None

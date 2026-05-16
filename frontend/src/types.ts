@@ -50,6 +50,9 @@ export interface EvidenceCard {
   estimated_net_monthly_usd: number;
   time_to_first_dollar_days: number;
   notes: string;
+  actionbook_session_id?: string | null;
+  actionbook_session_url?: string | null;
+  actionbook_screenshot_url?: string | null;
 }
 
 export interface Opportunity {

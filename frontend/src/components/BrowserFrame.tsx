@@ -5,6 +5,10 @@ interface Props {
   url: string;
   title: string;
   active: boolean;
+  /** When present, renders a live Actionbook session iframe instead of children. */
+  liveUrl?: string | null;
+  /** Fallback when liveUrl absent: static screenshot URL from Actionbook. */
+  screenshotUrl?: string | null;
 }
 
 /**
@@ -16,6 +20,8 @@ export default function BrowserFrame({
   url,
   title,
   active,
+  liveUrl,
+  screenshotUrl,
   children,
 }: React.PropsWithChildren<Props>) {
   const [pulse, setPulse] = useState(false);
@@ -63,11 +69,28 @@ export default function BrowserFrame({
         </div>
       </div>
 
-      {/* Content viewport */}
-      <div className="relative max-h-72 overflow-y-auto scrollbar-thin bg-white">
-        <div className="p-3 text-sm">{children}</div>
-        {/* Bottom fade so cropped content doesn't feel cut */}
-        <div className="pointer-events-none sticky bottom-0 h-6 -mt-6 bg-gradient-to-t from-white to-transparent" />
+      {/* Content viewport — live Actionbook iframe if liveUrl, else screenshot, else children */}
+      <div className="relative max-h-72 overflow-hidden bg-white">
+        {liveUrl ? (
+          <iframe
+            src={liveUrl}
+            title={`Actionbook live session — ${title}`}
+            className="w-full h-72 border-0"
+            sandbox="allow-same-origin allow-scripts allow-forms"
+            referrerPolicy="no-referrer"
+          />
+        ) : screenshotUrl ? (
+          <img
+            src={screenshotUrl}
+            alt={`Actionbook session screenshot — ${title}`}
+            className="w-full h-72 object-cover object-top"
+          />
+        ) : (
+          <div className="max-h-72 overflow-y-auto scrollbar-thin">
+            <div className="p-3 text-sm">{children}</div>
+            <div className="pointer-events-none sticky bottom-0 h-6 -mt-6 bg-gradient-to-t from-white to-transparent" />
+          </div>
+        )}
       </div>
     </div>
   );
