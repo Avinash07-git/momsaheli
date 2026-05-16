@@ -175,6 +175,7 @@ export interface CustomerLead {
     | 'marketplace'
     | 'approved_group'
     | 'warm_network'
+    | 'public_demand_post'
     | 'local_directory'
     | 'event_page'
     | 'manual';
@@ -186,6 +187,9 @@ export interface CustomerLead {
   live_source: boolean;
   provider: string;
   notes?: string | null;
+  posted_at?: string | null;
+  recency?: string | null;
+  demand_signal?: string | null;
 }
 
 export interface ActionCandidate {

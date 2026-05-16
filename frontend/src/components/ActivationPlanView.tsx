@@ -204,7 +204,17 @@ export default function ActivationPlanView({ plan, runId }: Props) {
                   </span>
                 </div>
                 <p className="text-sm text-ink-700 leading-relaxed">{lead.why_relevant}</p>
+                {lead.demand_signal && (
+                  <p className="text-sm text-ink-800 leading-relaxed mt-2">
+                    {lead.demand_signal}
+                  </p>
+                )}
                 <p className="text-xs text-ink-500 mt-2">{lead.audience_match}</p>
+                {(lead.recency || lead.posted_at) && (
+                  <p className="text-xs text-ink-500 mt-1">
+                    {[lead.recency, lead.posted_at].filter(Boolean).join(' · ')}
+                  </p>
+                )}
                 {lead.source_url && (
                   <a
                     href={lead.source_url}

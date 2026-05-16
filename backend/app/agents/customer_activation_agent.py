@@ -13,6 +13,7 @@ log = logging.getLogger(__name__)
 SAFETY_NOTES = [
     "No post or submission happens without explicit approval.",
     "Private group members are never scraped.",
+    "Public demand posts are review links, not permission to contact private people.",
     "Fixture fallback leads are labeled as fallback.",
 ]
 
@@ -337,7 +338,7 @@ def _action_from_public_lead(
             profile=profile,
             reason_detail="Marketplace paths can validate demand without private scraping.",
         )
-    if lead.source_type in {"community_page", "local_directory", "manual"}:
+    if lead.source_type in {"community_page", "public_demand_post", "local_directory", "manual"}:
         return _candidate(
             action_type="manual_step",
             title=f"Review public customer path: {lead.title}",
@@ -350,7 +351,10 @@ def _action_from_public_lead(
             draft_text=messages["short"],
             form_fields=None,
             profile=profile,
-            reason_detail="This is a public path to review manually before outreach.",
+            reason_detail=(
+                "This is a public demand signal or path to review manually; "
+                "it does not authorize scraping or direct contact."
+            ),
         )
     return None
 

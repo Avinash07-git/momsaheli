@@ -205,12 +205,31 @@ async def search_customer_leads(profile, opportunity, limit: int = 6) -> list[di
     Safety boundaries: public pages only, no private group scraping, no member scraping,
     no phone-number collection, and no login bypass.
     """
-    queries = _customer_lead_queries(profile, opportunity)
+    demand_queries = _recent_customer_post_queries(profile, opportunity)
+    path_queries = _customer_lead_queries(profile, opportunity)
 
     if settings.BRIGHT_DATA_API_TOKEN and settings.BRIGHT_DATA_ZONE and not settings.USE_FIXTURES:
         try:
             leads: list[dict] = []
-            for query in queries:
+            for query in demand_queries:
+                html = await _bd_fetch(_build_recent_search_url(query))
+                if not html:
+                    continue
+                extracted = await _extract_customer_leads_from_html(
+                    html=html,
+                    query=query,
+                    profile=profile,
+                    opportunity=opportunity,
+                    limit=max(1, limit - len(leads)),
+                    demand_post_search=True,
+                )
+                leads.extend(extracted)
+                leads = _dedupe_customer_lead_dicts(leads)
+                if len(leads) >= min(3, limit):
+                    log.info("bright_data.customer_leads.live_demand", extra={"count": len(leads)})
+                    return leads[:limit]
+
+            for query in path_queries:
                 html = await _bd_fetch(_build_search_url("google", query))
                 if not html:
                     continue
@@ -220,6 +239,7 @@ async def search_customer_leads(profile, opportunity, limit: int = 6) -> list[di
                     profile=profile,
                     opportunity=opportunity,
                     limit=max(1, limit - len(leads)),
+                    demand_post_search=False,
                 )
                 leads.extend(extracted)
                 if len(leads) >= limit:
@@ -233,7 +253,7 @@ async def search_customer_leads(profile, opportunity, limit: int = 6) -> list[di
 
     if tavily.is_configured():
         try:
-            leads = await _search_customer_leads_tavily(profile, opportunity, queries, limit=limit)
+            leads = await _search_customer_leads_tavily(profile, opportunity, demand_queries + path_queries, limit=limit)
             if leads:
                 log.info("bright_data.customer_leads.tavily", extra={"count": len(leads)})
                 return leads[:limit]
@@ -285,6 +305,11 @@ def _build_search_url(source: str, query: str) -> str:
         return f"https://www.google.com/search?q={q}+sold+listings"
     # Default: Google SERP (works for any keyword, returns rich snippets BD passes through)
     return f"https://www.google.com/search?q={q}"
+
+
+def _build_recent_search_url(query: str) -> str:
+    """Google SERP URL biased toward recently indexed public posts."""
+    return f"https://www.google.com/search?q={quote_plus(query)}&tbs=qdr:m"
 
 
 async def _bd_fetch(url: str) -> str:
@@ -598,24 +623,31 @@ async def _extract_customer_leads_from_html(
     profile,
     opportunity,
     limit: int,
+    demand_post_search: bool = False,
 ) -> list[dict]:
     snippet = _strip_html(html)
     if len(snippet) < 200:
         return []
+    if demand_post_search:
+        return _extract_customer_leads_deterministic(
+            html, query, profile, opportunity, limit, demand_post_search=True
+        )
 
     system = (
         "You extract public customer-acquisition paths from Google SERP or public web HTML for Mom's Saheli. "
         "Only include public pages a working mom can review safely: vendor applications, school enrichment/vendor "
         "pages, community business-post rules pages, event/vendor pages, directories, marketplace listing paths, "
-        "or public group landing/rules pages. "
-        "Never include private group members, WhatsApp invite scraping, phone numbers, login-only pages, or anything "
-        "that requires bypassing access controls. "
+        "public group landing/rules pages, or public posts from real users asking for recommendations or help. "
+        "For public posts from real users, use source_type='public_demand_post', summarize the need, and do not "
+        "extract names, usernames, phone numbers, emails, or private contact information. "
+        "Never include private group members, WhatsApp invite scraping, phone numbers, emails, login-only pages, "
+        "or anything that requires bypassing access controls. "
         "Output ONLY JSON in this exact shape: "
         '{"leads": [{'
         '"id": str, '
         '"title": str, '
         '"source_type": "vendor_form"|"community_page"|"school_page"|"marketplace"|"approved_group"|'
-        '"warm_network"|"local_directory"|"event_page"|"manual", '
+        '"warm_network"|"public_demand_post"|"local_directory"|"event_page"|"manual", '
         '"source_url": str|null, '
         '"audience_match": str, '
         '"why_relevant": str, '
@@ -623,7 +655,10 @@ async def _extract_customer_leads_from_html(
         '"confidence": float 0..1, '
         '"live_source": true, '
         '"provider": "bright_data", '
-        '"notes": str|null'
+        '"notes": str|null, '
+        '"posted_at": str|null, '
+        '"recency": str|null, '
+        '"demand_signal": str|null'
         "}]}. "
         f"Return at most {limit} leads."
     )
@@ -642,6 +677,7 @@ async def _extract_customer_leads_from_html(
             "category": getattr(opportunity, "category", ""),
         },
         "html_excerpt": snippet,
+        "demand_post_search": demand_post_search,
     })
     try:
         result = await llm_cascade.chat_json(
@@ -664,10 +700,14 @@ async def _extract_customer_leads_from_html(
                 cleaned.append(lead)
         if cleaned:
             return cleaned
-        return _extract_customer_leads_deterministic(html, query, profile, opportunity, limit)
+        return _extract_customer_leads_deterministic(
+            html, query, profile, opportunity, limit, demand_post_search=demand_post_search
+        )
     except Exception as e:
         log.warning("bright_data.customer_extract.fail", extra={"err": str(e)[:200]})
-        return _extract_customer_leads_deterministic(html, query, profile, opportunity, limit)
+        return _extract_customer_leads_deterministic(
+            html, query, profile, opportunity, limit, demand_post_search=demand_post_search
+        )
 
 
 def _extract_customer_leads_deterministic(
@@ -676,12 +716,14 @@ def _extract_customer_leads_deterministic(
     profile,
     opportunity,
     limit: int,
+    demand_post_search: bool = False,
 ) -> list[dict]:
     """Fallback extractor for Bright Data SERP HTML when no live LLM is available."""
-    blocks = re.findall(r"<a\s+[^>]*href=[\"']([^\"']+)[\"'][^>]*>(.*?)</a>", html, flags=re.I | re.S)
+    blocks = re.finditer(r"<a\s+[^>]*href=[\"']([^\"']+)[\"'][^>]*>(.*?)</a>", html, flags=re.I | re.S)
     leads: list[dict] = []
     seen_urls: set[str] = set()
-    for href, inner in blocks:
+    for match in blocks:
+        href, inner = match.group(1), match.group(2)
         url = _resolve_google_url(href)
         if not url or url in seen_urls or not _is_safe_public_url(url):
             continue
@@ -691,14 +733,30 @@ def _extract_customer_leads_deterministic(
         title = _clean_text(re.sub(r"<[^>]+>", " ", unescape(inner)), 140)
         if len(title) < 8:
             title = _clean_text(parsed.netloc.replace("www.", ""), 140)
-        combined = f"{title} {url} {query}"
-        source_type = _classify_customer_source(combined)
+        if _looks_like_navigation_title(title):
+            continue
+        window = _html_to_text(html[match.start(): match.end() + 2400], max_chars=2400)
+        result_text = f"{title} {window} {url}"
+        if demand_post_search and _is_low_intent_social_host(parsed.netloc) and not _matches_local_market(result_text, profile):
+            continue
+        combined = f"{result_text} {query}"
+        source_type = "public_demand_post" if demand_post_search else _classify_customer_source(result_text)
+        if demand_post_search and _looks_like_provider_promo(title):
+            continue
+        if demand_post_search and not _matches_local_market(result_text, profile):
+            continue
+        if demand_post_search and not _looks_like_public_demand(result_text):
+            continue
+        if not demand_post_search and source_type == "manual":
+            continue
         if source_type == "manual" and len(leads) >= max(1, limit // 2):
             continue
         seen_urls.add(url)
+        recency = _extract_recency(window)
+        demand_signal = _public_demand_signal(window or title, query)
         leads.append({
             "id": f"bd_serp_customer_{len(leads) + 1}_{_slug(title)[:32]}",
-            "title": title,
+            "title": _public_demand_title(title, url, query) if demand_post_search else title,
             "source_type": source_type,
             "source_url": url,
             "audience_match": (
@@ -706,14 +764,22 @@ def _extract_customer_leads_deterministic(
                 f"parents and families connected to {getattr(opportunity, 'title', 'the offer')}"
             ),
             "why_relevant": (
-                "Bright Data returned this public search result for a customer-acquisition query; "
-                "review the page rules before outreach."
+                "Bright Data found a recent public demand post near the mom's market; review the public source before any outreach."
+                if demand_post_search
+                else "Bright Data returned this public search result for a customer-acquisition query; review the page rules before outreach."
             ),
             "estimated_reach": _estimated_reach_for_source(source_type),
-            "confidence": 0.62 if source_type != "manual" else 0.48,
+            "confidence": 0.72 if source_type == "public_demand_post" else (0.62 if source_type != "manual" else 0.48),
             "live_source": True,
             "provider": "bright_data",
-            "notes": "Deterministic SERP extraction; no private groups, member lists, or phone numbers collected.",
+            "notes": (
+                "Recent public post surfaced by Bright Data; no private group members, handles, phone numbers, or emails collected."
+                if demand_post_search
+                else "Deterministic SERP extraction; no private groups, member lists, or phone numbers collected."
+            ),
+            "posted_at": None,
+            "recency": recency,
+            "demand_signal": demand_signal,
         })
         if len(leads) >= limit:
             break
@@ -768,6 +834,43 @@ def _customer_lead_queries(profile, opportunity) -> list[str]:
         f"{geo} local moms group rules business post".strip(),
         f"{title} {geo} customers parents".strip(),
         f"{geo} {category.replace('_', ' ')} marketplace listing parents".strip(),
+    ]
+
+
+def _recent_customer_post_queries(profile, opportunity) -> list[str]:
+    city = getattr(profile, "city", None) or ""
+    state = getattr(profile, "state", "") or ""
+    geo = " ".join(part for part in [city, state] if part).strip()
+    title = getattr(opportunity, "title", "") or ""
+    category = getattr(opportunity, "category", "") or ""
+    skills = " ".join(getattr(profile, "skills", []) or []).lower()
+
+    if category == "food_local" or any(k in f"{skills} {title}".lower() for k in ("meal", "food", "cook", "tiffin")):
+        need_terms = [
+            '"meal prep"',
+            '"family dinner"',
+            '"home cooked meals"',
+            '"kids meals"',
+        ]
+        intent_terms = ['"looking for"', '"recommend"', '"need"', '"anyone know"']
+    elif category == "digital_async" or any(k in f"{skills} {title}".lower() for k in ("canva", "printable", "template")):
+        need_terms = ['"printable"', '"canva template"', '"kids lunch"', '"planner"']
+        intent_terms = ['"looking for"', '"recommend"', '"need"', '"where can I find"']
+    else:
+        need_terms = [f'"{title[:60]}"' if title else '"parent services"']
+        intent_terms = ['"looking for"', '"recommend"', '"need"']
+
+    local = f'"{city}" "{state}"'.strip() if city or state else geo
+    base_need = need_terms[0]
+    second_need = need_terms[1] if len(need_terms) > 1 else need_terms[0]
+    return [
+        f'{local} {intent_terms[0]} {base_need} parents'.strip(),
+        f'"{city}" {base_need} {intent_terms[1]} parents'.strip(),
+        f'site:reddit.com "{city}" {base_need} {intent_terms[1]} parents'.strip(),
+        f'site:reddit.com/r/{_slug(city) if city else ""} {base_need} {intent_terms[2]}'.strip(),
+        f'"{city}" {intent_terms[3] if len(intent_terms) > 3 else intent_terms[1]} {second_need} moms'.strip(),
+        f'site:craigslist.org "{city}" {base_need} wanted help'.strip(),
+        f'"{city}" public forum {second_need} {intent_terms[1]} families'.strip(),
     ]
 
 
@@ -855,6 +958,10 @@ def _domain_label(host: str) -> str:
         return "Reddit"
     if "quora.com" in host:
         return "Quora"
+    if "facebook.com" in host:
+        return "Facebook"
+    if "craigslist.org" in host:
+        return "Craigslist"
     return host.replace("www.", "").split(":")[0]
 
 
@@ -991,6 +1098,7 @@ def _normalize_customer_lead_dict(
         "marketplace",
         "approved_group",
         "warm_network",
+        "public_demand_post",
         "local_directory",
         "event_page",
         "manual",
@@ -1020,6 +1128,9 @@ def _normalize_customer_lead_dict(
         "live_source": bool(live_source),
         "provider": provider,
         "notes": _clean_text(raw.get("notes"), 240) if raw.get("notes") else None,
+        "posted_at": _clean_text(raw.get("posted_at"), 80) if raw.get("posted_at") else None,
+        "recency": _clean_text(raw.get("recency"), 80) if raw.get("recency") else None,
+        "demand_signal": _clean_text(raw.get("demand_signal"), 320) if raw.get("demand_signal") else None,
     }
 
 
@@ -1052,6 +1163,8 @@ def _load_customer_lead_fixture(profile, opportunity, limit: int) -> list[dict]:
 
 def _classify_customer_source(text: str) -> str:
     t = text.lower()
+    if _looks_like_public_demand(t):
+        return "public_demand_post"
     if any(k in t for k in ("school", "pta", "district", "enrichment", "parent teacher")):
         return "school_page"
     if any(k in t for k in ("vendor", "application", "apply", "form", "catering inquiry")):
@@ -1072,11 +1185,104 @@ def _estimated_reach_for_source(source_type: str) -> str:
         "vendor_form": "Public vendor intake path",
         "school_page": "School or parent community audience",
         "community_page": "Public community rules or landing page",
+        "public_demand_post": "Recent public post showing customer demand",
         "marketplace": "Marketplace shoppers searching the category",
         "local_directory": "Local directory visitors",
         "event_page": "Event attendees or vendor buyers",
         "manual": "Manual review required",
     }.get(source_type, "Public customer path")
+
+
+def _looks_like_public_demand(text: str) -> bool:
+    t = text.lower()
+    demand_markers = (
+        "looking for", "recommend", "recommendation", "need ", "needs ",
+        "anyone know", "iso ", "in search of", "where can i find",
+        "who makes", "help with", "ideas for", "what do you use",
+    )
+    customer_markers = (
+        "parent", "parents", "mom", "moms", "family", "families", "kids",
+        "children", "school", "lunch", "dinner", "meal", "printable",
+        "template", "planner",
+    )
+    return any(marker in t for marker in demand_markers) and any(marker in t for marker in customer_markers)
+
+
+def _looks_like_provider_promo(title: str) -> bool:
+    t = title.lower()
+    demand_title_markers = (
+        "looking for", "recommend", "recommendations", "need ", "anyone know",
+        "in search of", "iso ", "where can i find",
+    )
+    if any(marker in t for marker in demand_title_markers):
+        return False
+    provider_markers = (
+        "private chef", "services", "serving", "owner", "offers", "offering",
+        "book", "available", "hiring", "grocery helpers", "meal prep service",
+        "catering", "menu", "order now",
+    )
+    return any(marker in t for marker in provider_markers)
+
+
+def _is_low_intent_social_host(host: str) -> bool:
+    lowered = host.lower()
+    return any(domain in lowered for domain in ("instagram.com", "tiktok.com", "youtube.com", "x.com", "twitter.com"))
+
+
+def _matches_local_market(text: str, profile) -> bool:
+    t = text.lower()
+    city = (getattr(profile, "city", None) or "").lower().strip()
+    state = (getattr(profile, "state", "") or "").lower().strip()
+    if city and city in t:
+        return True
+    if state and state in t and not city:
+        return True
+    return False
+
+
+def _extract_recency(text: str) -> str | None:
+    patterns = (
+        r"\b\d+\s+(?:minute|hour|day|week|month)s?\s+ago\b",
+        r"\b(?:today|yesterday)\b",
+        r"\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)\.?\s+\d{1,2},?\s+\d{4}\b",
+        r"\b\d{1,2}/\d{1,2}/\d{2,4}\b",
+    )
+    for pattern in patterns:
+        match = re.search(pattern, text, flags=re.I)
+        if match:
+            return _clean_text(match.group(0), 80)
+    return "recent public search result"
+
+
+def _public_demand_signal(text: str, query: str) -> str:
+    cleaned = _clean_text(text, 700)
+    if not cleaned:
+        return f"Public demand signal from query: {query}"
+    lower = cleaned.lower()
+    markers = (
+        "looking for", "recommend", "need ", "anyone know", "in search of",
+        "where can i find", "meal prep", "family dinner", "printable", "template",
+    )
+    for marker in markers:
+        idx = lower.find(marker)
+        if idx >= 0:
+            return _clean_text(cleaned[max(0, idx - 90): idx + 330], 360)
+    return cleaned[:360]
+
+
+def _public_demand_title(title: str, url: str, query: str) -> str:
+    host = urlparse(url).netloc.lower()
+    source = _domain_label(host) or "public web"
+    lowered = query.lower()
+    if "meal prep" in lowered:
+        topic = "meal prep or family dinner help"
+    elif "family dinner" in lowered or "home cooked" in lowered:
+        topic = "home-cooked family meals"
+    elif "printable" in lowered or "canva" in lowered:
+        topic = "printables or Canva templates"
+    else:
+        topic = _clean_text(title, 80).lower() or "local parent help"
+    return f"Recent public {source} demand post: {topic}"
 
 
 def _is_safe_public_url(url: str) -> bool:
@@ -1090,6 +1296,8 @@ def _is_safe_public_url(url: str) -> bool:
         "auth",
         "phone=",
         "tel:",
+        "mailto:",
+        "email=",
     )
     return not any(part in lowered for part in blocked)
 
@@ -1109,11 +1317,25 @@ def _dedupe_customer_lead_dicts(leads: list[dict]) -> list[dict]:
 
 
 _PHONE_RE = re.compile(r"(\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}")
+_EMAIL_RE = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", flags=re.I)
+_REDDIT_USER_RE = re.compile(r"\bu/[A-Za-z0-9_-]+\b")
+_NAME_INTRO_RE = re.compile(
+    r"\b(?:I['’]?m|I am|my name is)\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?",
+    flags=re.I,
+)
+_FACEBOOK_ACTOR_RE = re.compile(r"\b[A-Z][A-Za-z.'-]+(?:\s+[A-Z][A-Za-z.'-]+){0,2}\s+▻")
 
 
 def _clean_text(value: object, max_chars: int) -> str:
     text = "" if value is None else str(value)
+    text = re.sub(r"<[^>]*>", " ", text)
+    text = re.sub(r"<[^<]{0,500}", " ", text)
+    text = re.sub(r"\b\.?[A-Za-z0-9_-]{2,}\{[^}]{0,500}\}", " ", text, flags=re.DOTALL)
     text = _PHONE_RE.sub("[phone omitted]", text)
+    text = _EMAIL_RE.sub("[email omitted]", text)
+    text = _REDDIT_USER_RE.sub("[public username omitted]", text)
+    text = _NAME_INTRO_RE.sub("I'm [person omitted]", text)
+    text = _FACEBOOK_ACTOR_RE.sub("[public poster omitted] ▻", text)
     text = re.sub(r"\s+", " ", text).strip()
     return text[:max_chars]
 

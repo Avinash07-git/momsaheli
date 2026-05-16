@@ -45,6 +45,7 @@ class CustomerLead(BaseModel):
         "marketplace",
         "approved_group",
         "warm_network",
+        "public_demand_post",
         "local_directory",
         "event_page",
         "manual",
@@ -57,6 +58,9 @@ class CustomerLead(BaseModel):
     live_source: bool
     provider: str
     notes: str | None = None
+    posted_at: str | None = None
+    recency: str | None = None
+    demand_signal: str | None = None
 
 
 class ActionCandidate(BaseModel):
