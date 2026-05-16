@@ -221,14 +221,30 @@ async def _extract_listings_from_html(html: str, query: str, source: str) -> lis
     if len(snippet) < 200:
         return []
 
+    # Source must be one of the EvidenceCard SourceType literals
+    valid_sources = {"etsy", "poshmark", "craigslist", "nextdoor", "outschool",
+                     "facebook_marketplace", "facebook_group", "castiron", "instagram"}
+    safe_source = source if source in valid_sources else "craigslist"
+
     system = (
         "You extract structured market-comp listings from raw HTML returned by a Bright Data "
-        "Web Unlocker scrape. Output ONLY JSON in the exact shape: "
-        '{"listings": [{"id": str, "source": str, "title": str, "url": str, '
-        '"price_usd": float|null, "note": str}]}. '
-        "Include 4-8 distinct listings. price_usd should be a single representative number "
-        "(median or asking) — never a range. url must be absolute (https://...). "
-        "If you cannot find structured listings, return an empty list."
+        "Web Unlocker scrape. Each listing is a real product/service someone is selling. "
+        "Output ONLY JSON in this exact shape: "
+        '{"listings": [{'
+        '"id": str (e.g. "bd_castiron_001"), '
+        '"title": str (max 100 chars, the actual product name from the page), '
+        f'"source": "{safe_source}", '
+        '"source_url": str (absolute URL of THAT specific listing if visible, else the search URL), '
+        '"observed_price_usd": float (single representative number, never a range), '
+        '"observed_volume_signal": str (e.g. "12 sold last month", "active seller", "high demand" — '
+        'extract from page if available, otherwise infer a reasonable signal), '
+        '"estimated_gross_monthly_usd": int (your best estimate of monthly gross revenue at observed price), '
+        '"estimated_net_monthly_usd": int (after ~30-40% platform fees + materials), '
+        '"time_to_first_dollar_days": int (typical days from listing to first sale, e.g. 7-30), '
+        '"notes": str (one-line why this is a relevant comp, max 200 chars)'
+        "}]}. "
+        "Include 3-6 distinct listings. If the HTML has no extractable listings, return an empty list. "
+        "DO NOT invent listings — extract only what's actually visible in the HTML excerpt."
     )
     user = json.dumps({
         "query": query,
@@ -242,17 +258,28 @@ async def _extract_listings_from_html(html: str, query: str, source: str) -> lis
         )
         raw = result.get("listings", []) if isinstance(result, dict) else []
         cleaned: list[dict] = []
-        for i, r in enumerate(raw[:8]):
+        for i, r in enumerate(raw[:6]):
             if not isinstance(r, dict) or not r.get("title"):
                 continue
-            cleaned.append({
-                "id": str(r.get("id") or f"bd_{source}_{i}"),
-                "source": str(r.get("source") or source),
-                "title": str(r.get("title"))[:160],
-                "url": str(r.get("url") or ""),
-                "price_usd": float(r["price_usd"]) if isinstance(r.get("price_usd"), (int, float)) else None,
-                "note": str(r.get("note") or "")[:280],
-            })
+            try:
+                price = float(r.get("observed_price_usd") or 0)
+                if price <= 0:
+                    continue
+                cleaned.append({
+                    "id": str(r.get("id") or f"bd_{safe_source}_{i:03d}"),
+                    "title": str(r.get("title"))[:160],
+                    "source": safe_source,
+                    "source_url": str(r.get("source_url") or _build_search_url(safe_source, query)),
+                    "observed_price_usd": price,
+                    "observed_volume_signal": str(r.get("observed_volume_signal") or "active listing"),
+                    "estimated_gross_monthly_usd": int(r.get("estimated_gross_monthly_usd") or price * 4),
+                    "estimated_net_monthly_usd": int(r.get("estimated_net_monthly_usd") or price * 2.5),
+                    "time_to_first_dollar_days": int(r.get("time_to_first_dollar_days") or 14),
+                    "notes": str(r.get("notes") or "")[:280],
+                })
+            except (ValueError, TypeError) as ve:
+                log.debug("bright_data.extract.skip_invalid", extra={"err": str(ve)})
+                continue
         return cleaned
     except Exception as e:
         log.warning("bright_data.extract.fail", extra={"err": str(e)[:200]})

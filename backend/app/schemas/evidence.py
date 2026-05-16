@@ -35,3 +35,7 @@ class EvidenceCard(BaseModel):
         description="Embeddable URL of the live Actionbook browser session (renders in <iframe>)",
     )
     actionbook_screenshot_url: str | None = None
+    # Bright Data provenance — set when this card came from a real live scrape
+    # (vs. fixture). UI can render a 'Live ✓' badge.
+    live_scrape_ok: bool = False
+    live_scrape_provider: str | None = None
