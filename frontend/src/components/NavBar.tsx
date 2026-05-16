@@ -1,7 +1,30 @@
+import { useEffect, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import clsx from 'clsx';
 
+interface Health {
+  status: string;
+  sponsors_configured?: { agentfield?: boolean };
+}
+
+// Convention: AgentField control plane dashboard. Override via env if needed.
+const AF_DASHBOARD_URL =
+  (import.meta as any).env?.VITE_AGENTFIELD_DASHBOARD_URL ?? 'http://localhost:8080/ui/';
+
 export default function NavBar() {
+  const [agentFieldLive, setAgentFieldLive] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    fetch('/health')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((h: Health | null) => {
+        if (alive && h?.sponsors_configured?.agentfield) setAgentFieldLive(true);
+      })
+      .catch(() => { /* silent — link just stays hidden */ });
+    return () => { alive = false; };
+  }, []);
+
   return (
     <header className="sticky top-0 z-30 border-b border-ink-100 bg-cream/80 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between gap-6">
@@ -27,6 +50,21 @@ export default function NavBar() {
         <nav className="hidden md:flex items-center gap-1 text-sm">
           <NavItem to="/" end>Home</NavItem>
           <NavItem to="/history">Run history</NavItem>
+
+          {agentFieldLive && (
+            <a
+              href={AF_DASHBOARD_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-ghost text-sm group"
+              title="Live nested-execution waterfall via AgentField"
+            >
+              <span className="status-dot-live" />
+              <span>Live workflow</span>
+              <span className="text-ink-400 group-hover:text-ink-700 transition-colors" aria-hidden>↗</span>
+            </a>
+          )}
+
           <a
             href="https://github.com/Avinash07-git/momsaheli"
             target="_blank"
