@@ -1,219 +1,384 @@
-import PresetButtons from '../components/PresetButtons';
-import StatCard from '../components/StatCard';
+import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import clsx from 'clsx';
+
+/* ─── Data ─────────────────────────────────────────────────────────────── */
 
 const STATS = [
+  { number: '7.3M',  label: 'single moms in America',                      source: 'CAP' },
+  { number: '75%',   label: 'already working — most full-time',             source: 'CAP' },
+  { number: '$40K',  label: 'median income for working single moms',        source: 'CAP' },
+  { number: '35%',   label: 'eaten by childcare before anything else',      source: 'Child Care Aware' },
+];
+
+const AGENTS = [
+  { n: 1, name: 'Profile',              color: '#f59e0b', desc: 'Skills, hours, budget, hard constraints — normalized in seconds.' },
+  { n: 2, name: 'Market Scout',         color: '#3b82f6', desc: 'Live Etsy + Bright Data: 6–10 ranked income paths, real evidence.' },
+  { n: 3, name: 'Reality & Compliance', color: '#ef4444', desc: 'Blocks illegal paths with the actual cited state statute.' },
+  { n: 4, name: 'Launch',               color: '#22c55e', desc: 'Offer + copy + 7-day plan + a real published landing page.' },
+  { n: 5, name: 'Memory',               color: '#a855f7', desc: 'Persists trajectory, surfaces a cross-user pattern for the next mom.' },
+];
+
+const PRESETS = [
   {
-    number: '7.3M',
-    label: 'single moms in America',
-    source: 'Center for American Progress',
-    sourceUrl: 'https://www.americanprogress.org/article/single-mothers-and-poverty/',
+    id: 'jenny',
+    emoji: '👩🏽‍🍳',
+    name: 'Jenny',
+    role: 'Daycare aide · California',
+    gap: '$600/mo gap',
+    hours: '5 hrs/wk',
+    skill: 'Loves cooking',
+    arc: 'Tiffin delivery ranks #1 — then gets BLOCKED by CA cottage-food law. Pivots to a legal winner.',
+    accentColor: '#f59e0b',
+    accentBg: '#fef3c7',
   },
   {
-    number: '75%',
-    label: 'are already working — most full-time',
-    source: 'CAP',
-    sourceUrl: 'https://www.americanprogress.org/article/single-mothers-and-poverty/',
-  },
-  {
-    number: '$40K',
-    label: 'median income, working single mom',
-    source: 'CAP',
-    sourceUrl: 'https://www.americanprogress.org/article/single-mothers-and-poverty/',
-  },
-  {
-    number: '35%',
-    label: 'of that income is eaten by childcare',
-    source: 'Child Care Aware',
-    sourceUrl: 'https://www.childcareaware.org/',
+    id: 'jessica',
+    emoji: '💻',
+    name: 'Jessica',
+    role: 'Customer-service rep · Texas',
+    gap: '$400/mo gap',
+    hours: '3 hrs/wk',
+    skill: 'Digital only',
+    arc: 'Digital-only world — Etsy printable lunchbox kit wins clean, zero compliance hits.',
+    accentColor: '#6366f1',
+    accentBg: '#ede9fe',
   },
 ];
 
-const HOW_STEPS = [
-  { n: 1, agent: 'Profile',              text: 'Normalize skills, hours, budget, hard constraints.',                        sponsor: 'Qwen' },
-  { n: 2, agent: 'Market Scout',         text: 'Live Etsy + Bright Data: 6–10 ranked income paths.',                        sponsor: 'Bright Data + Actionbook' },
-  { n: 3, agent: 'Reality & Compliance', text: 'Block illegal options with the actual cited state law.',                    sponsor: 'Bright Data' },
-  { n: 4, agent: 'Launch',               text: 'Offer + copy + 7-day plan + a real published landing page.',                sponsor: 'Actionbook + Butterbase' },
-  { n: 5, agent: 'Memory',               text: 'Persist trajectory + surface a cross-user pattern.',                         sponsor: 'Evermind' },
-];
+/* ─── Main ──────────────────────────────────────────────────────────────── */
 
 export default function Home() {
   return (
-    <>
-      {/* ───────────────────── HERO ───────────────────── */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-hero-warm" aria-hidden />
-        {/* Decorative blur orbs */}
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-brand-300/30 blur-3xl" aria-hidden />
-        <div className="absolute bottom-0 -left-32 w-96 h-96 rounded-full bg-rose-300/20 blur-3xl" aria-hidden />
+    <div className="bg-white">
 
-        <div className="relative max-w-7xl mx-auto px-6 pt-20 pb-24 md:pt-28 md:pb-32">
-          <div className="grid lg:grid-cols-12 gap-12 items-center">
-            {/* Headline column */}
-            <div className="lg:col-span-7 animate-slide-up">
-              <div className="inline-flex items-center gap-2 mb-6 px-3 py-1.5 rounded-full bg-white/70 border border-ink-200 backdrop-blur-sm shadow-soft">
-                <span className="status-dot-live" />
-                <span className="text-xs font-semibold text-ink-700">
-                  Live at Agent Forge AI · San Francisco · May 16 2026
+      {/* ══════════════════════════════════════════
+          HERO — dark, bold, premium
+          ══════════════════════════════════════════ */}
+      <section className="relative bg-[#0c0a09] overflow-hidden">
+        {/* Subtle warm glow top-right */}
+        <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full opacity-20 blur-3xl pointer-events-none"
+          style={{ background: 'radial-gradient(circle, #f59e0b 0%, transparent 70%)' }} />
+        {/* Subtle rose glow bottom-left */}
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full opacity-10 blur-3xl pointer-events-none"
+          style={{ background: 'radial-gradient(circle, #fb7185 0%, transparent 70%)' }} />
+
+        <div className="relative max-w-7xl mx-auto px-6 pt-24 pb-28 lg:pt-32 lg:pb-36">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+
+            {/* Left: headline */}
+            <div>
+              {/* Live badge */}
+              <div className="inline-flex items-center gap-2 mb-8 px-3.5 py-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-sm">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-[12px] font-semibold text-white/70 tracking-wide">
+                  Agent Forge AI Hackathon · SF · May 16, 2026
                 </span>
               </div>
 
-              <h1 className="serif font-bold text-ink-950 mb-6 text-display-md md:text-display-lg">
-                The friend every working mom can{' '}
-                <span className="text-gradient-warm italic">finally</span>{' '}
-                afford.
+              <h1 className="font-serif text-[52px] lg:text-[68px] font-bold leading-[1.05] tracking-tight text-white mb-6">
+                The friend every{' '}
+                <span className="text-[#f59e0b]">working mom</span>{' '}
+                can finally afford.
               </h1>
 
-              <p className="text-xl text-ink-700 leading-relaxed mb-8 max-w-2xl">
-                A consultant costs <strong className="text-ink-900">$2,000</strong>. A bookkeeper, a lawyer, a marketer — each $200/hr.
-                Mom's Saheli is the <strong className="text-ink-900">agent swarm that does all of it</strong>:
-                live market intel, cited regulatory check, a real published launch page, and cross-user learning.
+              <p className="text-[17px] text-white/60 leading-relaxed mb-10 max-w-lg">
+                A consultant costs $2,000. Mom's Saheli is the{' '}
+                <span className="text-white/90 font-medium">AI agent swarm</span> that does it all —
+                live market intel, cited legal checks, and a real published launch page.
               </p>
 
-              <div className="flex flex-wrap items-center gap-3 mb-8">
-                <a href="#run" className="btn-accent">
-                  Watch a live run
-                  <span aria-hidden>→</span>
+              <div className="flex flex-wrap gap-3 mb-10">
+                <a href="#run" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#f59e0b] text-[#0c0a09] font-bold text-[15px] hover:bg-[#fbbf24] transition-colors shadow-lg">
+                  Run the swarm
+                  <span>→</span>
                 </a>
-                <a href="#how" className="btn-outline">How it works</a>
+                <a href="#how" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-white/15 text-white/80 font-semibold text-[15px] hover:bg-white/5 transition-colors">
+                  How it works
+                </a>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 text-xs">
-                <Badge>5 agents</Badge>
-                <Badge>9 sponsor tools</Badge>
-                <Badge>Cited regulations</Badge>
-                <Badge>Real launch pages</Badge>
+              {/* Feature pills */}
+              <div className="flex flex-wrap gap-2">
+                {['5 AI agents', '9 sponsor tools', 'Cited regulations', 'Real launch pages'].map((f) => (
+                  <span key={f} className="px-3 py-1 rounded-full text-[12px] font-medium text-white/50 border border-white/10 bg-white/5">
+                    {f}
+                  </span>
+                ))}
               </div>
             </div>
 
-            {/* Preview card column */}
-            <div className="lg:col-span-5 animate-slide-up" style={{ animationDelay: '120ms' }}>
-              <HeroPreviewCard />
+            {/* Right: product preview card */}
+            <div className="relative">
+              <div className="absolute -inset-6 rounded-3xl opacity-30 blur-2xl"
+                style={{ background: 'radial-gradient(ellipse, #f59e0b 0%, transparent 70%)' }} />
+              <div className="relative rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm overflow-hidden shadow-2xl">
+                {/* Card header */}
+                <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/10 bg-white/5">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-[12px] font-semibold text-white/70">live agent run · jenny</span>
+                  </div>
+                  <span className="text-[11px] font-mono text-white/30">run_a93f1c…</span>
+                </div>
+                {/* Agent rows */}
+                <div className="px-5 py-4 space-y-3">
+                  {[
+                    { agent: 'Profile Agent',          status: 'done',    label: 'normalized · 5 hr/wk · CA',      color: '#22c55e' },
+                    { agent: 'Market Scout',            status: 'done',    label: '6 income paths ranked',          color: '#22c55e' },
+                    { agent: 'Reality & Compliance',    status: 'block',   label: '3 BLOCKs · CA H&S §114365',     color: '#ef4444' },
+                    { agent: 'Launch Agent',            status: 'running', label: 'generating offer + page…',       color: '#f59e0b' },
+                    { agent: 'Memory Agent',            status: 'idle',    label: 'awaiting trajectory',            color: '#52525b' },
+                  ].map((row) => (
+                    <div key={row.agent} className="flex items-center gap-3">
+                      <span className="w-2 h-2 rounded-full shrink-0 shadow-sm"
+                        style={{ background: row.color, boxShadow: row.status === 'running' ? `0 0 8px ${row.color}` : undefined }} />
+                      <span className="text-[13px] font-semibold text-white/80 w-44 shrink-0">{row.agent}</span>
+                      <span className="text-[12px] text-white/40 truncate">{row.label}</span>
+                    </div>
+                  ))}
+                </div>
+                {/* Card footer */}
+                <div className="px-5 py-3 border-t border-white/10 flex items-center justify-between bg-white/3">
+                  <span className="text-[11px] text-white/30">via AgentField</span>
+                  <span className="text-[11px] font-mono text-white/50">22.3s elapsed</span>
+                </div>
+              </div>
             </div>
+
           </div>
         </div>
       </section>
 
-      {/* ───────────────────── STATS ───────────────────── */}
-      <section className="max-w-7xl mx-auto px-6 py-20">
-        <div className="max-w-3xl mb-10">
-          <div className="eyebrow mb-3">The margin problem</div>
-          <h2 className="serif text-display-sm font-bold text-ink-950 leading-tight">
-            She's not short on effort. She's short on{' '}
-            <span className="text-gradient-warm italic">margin</span>.
-          </h2>
-          <p className="text-ink-600 mt-4 text-lg max-w-2xl">
-            Every number below is cited. No inflated TAM, no marketing math — just the gap.
+      {/* ══════════════════════════════════════════
+          STATS STRIP — full bleed, warm dark bg
+          ══════════════════════════════════════════ */}
+      <section className="bg-[#18181b] py-16">
+        <div className="max-w-7xl mx-auto px-6">
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#71717a] mb-10 text-center">
+            The problem, by the numbers — every figure cited
           </p>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-          {STATS.map((s) => (
-            <StatCard key={s.label} {...s} />
-          ))}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-0 divide-x divide-white/10">
+            {STATS.map((s) => (
+              <div key={s.label} className="px-8 first:pl-0 last:pr-0 py-2">
+                <div className="font-serif text-[48px] lg:text-[56px] font-bold leading-none text-[#f59e0b] tabular-nums mb-2">
+                  {s.number}
+                </div>
+                <div className="text-[14px] text-white/70 leading-snug mb-3 font-medium">{s.label}</div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#52525b]">
+                  {s.source}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* ───────────────────── RUN ───────────────────── */}
-      <section id="run" className="relative max-w-7xl mx-auto px-6 py-20">
-        <div className="max-w-3xl mx-auto text-center mb-12">
-          <div className="eyebrow mb-3 justify-center">Try it now</div>
-          <h2 className="serif text-display-sm font-bold text-ink-950 leading-tight mb-4">
-            Run the swarm.
-          </h2>
-          <p className="text-ink-600 text-lg leading-relaxed">
-            Two real moms. <strong className="text-ink-900">Same five agents.</strong> Completely different output.
-            Proves nothing is hardcoded — it's the regulation, the constraints, and the math doing the work.
-          </p>
-        </div>
-        <div className="max-w-4xl mx-auto">
-          <PresetButtons />
-        </div>
-      </section>
+      {/* ══════════════════════════════════════════
+          HOW IT WORKS — clean white, generous space
+          ══════════════════════════════════════════ */}
+      <section id="how" className="bg-white py-28 lg:py-36">
+        <div className="max-w-7xl mx-auto px-6">
 
-      {/* ───────────────────── HOW ───────────────────── */}
-      <section id="how" className="max-w-7xl mx-auto px-6 py-20">
-        <div className="surface p-10 md:p-14 bg-gradient-to-br from-white to-brand-50/60 relative overflow-hidden">
-          <div className="absolute -top-20 -right-20 w-72 h-72 rounded-full bg-brand-200/30 blur-3xl" aria-hidden />
+          <div className="max-w-2xl mb-20">
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#a8a29e] mb-4">How it works</p>
+            <h2 className="font-serif text-[42px] lg:text-[52px] font-bold text-[#0c0a09] leading-tight tracking-tight mb-5">
+              Five agents. One mom.<br />One published page.
+            </h2>
+            <p className="text-[16px] text-[#78716c] leading-relaxed">
+              Each agent does one job. Together they replace the consultant, the lawyer, the marketer, and the bookkeeper.
+            </p>
+          </div>
+
+          {/* Steps */}
           <div className="relative">
-            <div className="max-w-2xl mb-12">
-              <div className="eyebrow mb-3">How it works</div>
-              <h2 className="serif text-display-sm font-bold text-ink-950 leading-tight">
-                Five agents. One mom. <span className="text-gradient-warm italic">One published page.</span>
-              </h2>
-            </div>
+            {/* Connecting line */}
+            <div className="hidden lg:block absolute top-8 left-8 right-8 h-px bg-[#e7e5e4]" />
 
-            <ol className="grid md:grid-cols-5 gap-6 md:gap-2 relative">
-              {/* connecting line on desktop */}
-              <div className="hidden md:block absolute top-6 left-[10%] right-[10%] h-px bg-gradient-to-r from-transparent via-brand-300 to-transparent" aria-hidden />
-              {HOW_STEPS.map((s) => (
-                <li key={s.n} className="relative flex flex-col items-start">
-                  <div className="grid place-items-center w-12 h-12 rounded-2xl serif font-bold text-2xl bg-white border border-brand-200 text-brand-700 shadow-soft mb-4 relative z-10">
-                    {s.n}
+            <div className="grid lg:grid-cols-5 gap-8 lg:gap-4">
+              {AGENTS.map((a) => (
+                <div key={a.n} className="relative">
+                  {/* Number circle */}
+                  <div
+                    className="relative z-10 w-16 h-16 rounded-2xl flex items-center justify-center font-serif text-[24px] font-bold text-white mb-5 shadow-lg"
+                    style={{ background: a.color }}
+                  >
+                    {a.n}
                   </div>
-                  <div className="font-semibold text-ink-900 mb-1">{s.agent}</div>
-                  <div className="text-sm text-ink-600 leading-snug mb-2">{s.text}</div>
-                  <div className="text-[10px] font-semibold uppercase tracking-eyebrow text-ink-400">
-                    {s.sponsor}
-                  </div>
-                </li>
+                  <div className="font-bold text-[15px] text-[#1c1917] mb-2">{a.name}</div>
+                  <div className="text-[13px] text-[#78716c] leading-relaxed">{a.desc}</div>
+                </div>
               ))}
-            </ol>
+            </div>
           </div>
         </div>
       </section>
-    </>
-  );
-}
 
-function Badge({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-ink-200 text-ink-700 font-medium shadow-soft">
-      <span className="w-1 h-1 rounded-full bg-brand-500" />
-      {children}
-    </span>
-  );
-}
+      {/* ══════════════════════════════════════════
+          RUN THE SWARM — light gray bg, big CTA
+          ══════════════════════════════════════════ */}
+      <section id="run" className="bg-[#fafaf9] py-28 lg:py-36 border-t border-[#e7e5e4]">
+        <div className="max-w-7xl mx-auto px-6">
 
-/* Tiny preview card on the hero — gives the eye somewhere to land + previews the product */
-function HeroPreviewCard() {
-  return (
-    <div className="relative">
-      {/* Floating glow */}
-      <div className="absolute -inset-4 bg-gradient-to-br from-brand-200/40 via-rose-200/30 to-transparent blur-2xl rounded-3xl" aria-hidden />
-      <div className="relative surface p-5 shadow-lift">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <span className="status-dot-live" />
-            <span className="text-xs font-semibold text-ink-700">live agent run · jenny</span>
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#a8a29e] mb-4">Try it now</p>
+            <h2 className="font-serif text-[42px] lg:text-[52px] font-bold text-[#0c0a09] leading-tight tracking-tight mb-5">
+              Run the swarm.
+            </h2>
+            <p className="text-[16px] text-[#78716c] leading-relaxed">
+              Two real moms. Same five agents. Completely different output.
+              Nothing is hardcoded — it's the law, the constraints, and the math doing the work.
+            </p>
           </div>
-          <span className="text-[10px] font-mono text-ink-400">run_a93f1c…</span>
+
+          <PersonaCards />
+
         </div>
-        <ul className="space-y-2.5">
-          <PreviewRow agent="Profile"               status="done"    label="normalized · 5 hr/wk · CA" />
-          <PreviewRow agent="Market Scout"          status="done"    label="6 opportunities ranked" />
-          <PreviewRow agent="Reality & Compliance"  status="block"   label="3 BLOCKs · CA H&S §114365" />
-          <PreviewRow agent="Launch"                status="running" label="generating offer + page…" />
-          <PreviewRow agent="Memory"                status="idle"    label="awaiting trajectory" />
-        </ul>
-        <div className="mt-4 pt-4 border-t border-ink-100 flex items-center justify-between text-xs">
-          <span className="text-ink-500">via AgentField</span>
-          <span className="font-mono text-ink-700">22.3s elapsed</span>
+      </section>
+
+      {/* ══════════════════════════════════════════
+          TRUST BAR — sponsors
+          ══════════════════════════════════════════ */}
+      <section className="bg-white border-t border-[#e7e5e4] py-12">
+        <div className="max-w-7xl mx-auto px-6 text-center">
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#a8a29e] mb-8">
+            Built on the Agent Forge sponsor stack — every tool load-bearing
+          </p>
+          <div className="flex flex-wrap justify-center gap-x-10 gap-y-3">
+            {[
+              'AgentField', 'Bright Data', 'Actionbook', 'Evermind',
+              'Butterbase', 'Qwen', 'Z.ai', 'TokenRouter', 'Zeabur',
+            ].map((s) => (
+              <span key={s} className="text-[13px] font-semibold text-[#a8a29e] hover:text-[#1c1917] transition-colors cursor-default">
+                {s}
+              </span>
+            ))}
+          </div>
         </div>
-      </div>
+      </section>
+
     </div>
   );
 }
 
-function PreviewRow({ agent, status, label }: { agent: string; status: 'idle'|'running'|'done'|'block'; label: string }) {
-  const tone =
-    status === 'done'    ? 'bg-emerald-500'
-  : status === 'running' ? 'bg-brand-500 animate-pulse'
-  : status === 'block'   ? 'bg-red-500'
-  :                        'bg-ink-300';
+/* ─── Persona cards with run action ─────────────────────────────────────── */
+
+function PersonaCards() {
+  const navigate = useNavigate();
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function go(personaId: string) {
+    if (busy) return;
+    setBusy(personaId);
+    setError(null);
+    try {
+      const profileRes = await fetch(`/api/fixtures/${personaId}`);
+      if (!profileRes.ok) throw new Error(`fixture ${personaId} not found`);
+      const profile = await profileRes.json();
+      const runRes = await fetch('/api/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profile }),
+      });
+      const { run_id } = await runRes.json();
+      navigate(`/run/${run_id}?persona=${personaId}`);
+    } catch (e: any) {
+      setError(`Could not start run: ${e?.message ?? e}`);
+      setBusy(null);
+    }
+  }
+
   return (
-    <li className="flex items-center gap-3 text-sm">
-      <span className={`w-2 h-2 rounded-full ${tone}`} />
-      <span className="font-semibold text-ink-800 w-44 shrink-0">{agent}</span>
-      <span className="text-ink-500 truncate">{label}</span>
-    </li>
+    <div>
+      <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+        {PRESETS.map((p) => {
+          const isBusy = busy === p.id;
+          return (
+            <button
+              key={p.id}
+              disabled={!!busy}
+              onClick={() => go(p.id)}
+              className={clsx(
+                'text-left rounded-2xl border bg-white transition-all duration-200 overflow-hidden group',
+                isBusy
+                  ? 'border-[#f59e0b] shadow-lg'
+                  : 'border-[#e7e5e4] hover:border-[#a8a29e] hover:shadow-lg',
+                busy && busy !== p.id ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+              )}
+            >
+              {/* Colored accent top bar */}
+              <div className="h-1.5 w-full" style={{ background: p.accentColor }} />
+
+              <div className="p-8">
+                {/* Avatar + name row */}
+                <div className="flex items-start justify-between mb-6">
+                  <div className="flex items-center gap-4">
+                    <div
+                      className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl shadow-sm shrink-0"
+                      style={{ background: p.accentBg }}
+                    >
+                      {p.emoji}
+                    </div>
+                    <div>
+                      <div className="font-serif text-[22px] font-bold text-[#1c1917] leading-tight">
+                        {isBusy ? (
+                          <span className="inline-flex items-center gap-2">
+                            <Spinner /> Starting…
+                          </span>
+                        ) : p.name}
+                      </div>
+                      <div className="text-[12px] text-[#78716c] font-medium mt-0.5">{p.role}</div>
+                    </div>
+                  </div>
+
+                  {/* Arrow */}
+                  <div className={clsx(
+                    'w-9 h-9 rounded-full border flex items-center justify-center text-[15px] shrink-0 transition-all',
+                    'border-[#e7e5e4] text-[#a8a29e] group-hover:border-[#1c1917] group-hover:text-[#1c1917] group-hover:bg-[#1c1917] group-hover:text-white',
+                  )}>
+                    →
+                  </div>
+                </div>
+
+                {/* Chips */}
+                <div className="flex flex-wrap gap-2 mb-5">
+                  {[p.gap, p.hours, p.skill].map((chip) => (
+                    <span
+                      key={chip}
+                      className="px-3 py-1 rounded-full text-[12px] font-semibold border"
+                      style={{ background: p.accentBg, color: p.accentColor, borderColor: `${p.accentColor}30` }}
+                    >
+                      {chip}
+                    </span>
+                  ))}
+                </div>
+
+                {/* Story arc */}
+                <div className="border-t border-[#f5f5f4] pt-5">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#a8a29e] mb-2">Story arc</div>
+                  <p className="text-[13px] text-[#44403c] leading-relaxed">{p.arc}</p>
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {error && (
+        <p className="mt-5 text-[14px] text-red-700 bg-red-50 border border-red-200 rounded-xl p-4 max-w-4xl mx-auto">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function Spinner() {
+  return (
+    <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="3" />
+      <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    </svg>
   );
 }
