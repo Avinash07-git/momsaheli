@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import uuid
 from typing import Any
 
 from agentfield import Agent, AIConfig
@@ -115,11 +116,63 @@ async def memory_agent(
 
 @af.reasoner(tags=["orchestrator", "swarm", "end-to-end"])
 async def run_full_swarm(raw_profile: dict) -> dict:
-    """Run the complete 5-agent pipeline end-to-end and return the launch URL."""
-    from app.orchestrator.runner import SwarmRunner
-    runner = SwarmRunner(raw_profile=raw_profile)
-    await runner.run()
-    return {"run_id": runner.run_id, "status": "complete"}
+    """Run the complete 5-agent pipeline end-to-end.
+
+    Calls each child @reasoner in sequence so the AgentField dashboard renders
+    the full nested waterfall — judges see one parent execution with 5 child
+    spans, each with their own inputs/outputs/timings/tags. This is the
+    'sponsor-genuine' moment vs. a flat opaque call.
+    """
+    run_id = f"af-{uuid.uuid4().hex[:12]}"
+
+    # 1. Profile
+    profile = await profile_agent(raw_profile)
+
+    # 2. Market scout (evidence + ranked opportunities)
+    market = await market_scout(raw_profile)
+    opportunities = market["opportunities"]
+    if not opportunities:
+        return {"run_id": run_id, "status": "no_opportunities", "profile": profile}
+
+    # 3. Reality & compliance (picks first PASS as winner)
+    compliance = await reality_compliance_agent(raw_profile, opportunities)
+    winner_id = compliance.get("winner_id")
+    winner = next((o for o in opportunities if o["id"] == winner_id), None)
+    if winner is None:
+        return {
+            "run_id": run_id,
+            "status": "all_blocked",
+            "profile": profile,
+            "checks": compliance["checks"],
+        }
+
+    # 4. Launch (offer + copy + real published page)
+    launch = await launch_agent(raw_profile, winner)
+
+    # 5. Memory (persist trajectory + surface cross-user pattern)
+    rejected = [o for o in opportunities if o["id"] != winner["id"]]
+    memory = await memory_agent(
+        run_id=run_id,
+        raw_profile=raw_profile,
+        winner=winner,
+        rejected=rejected,
+        compliance_checks=compliance["checks"],
+    )
+
+    checks = compliance["checks"]
+    return {
+        "run_id": run_id,
+        "status": "complete",
+        "profile": profile,
+        "winner": winner,
+        "launch_url": launch["launch_url"],
+        "pattern": memory["pattern"],
+        "compliance_summary": {
+            "blocks": sum(1 for c in checks if c["verdict"] == "BLOCK"),
+            "passes": sum(1 for c in checks if c["verdict"] == "PASS"),
+            "warns":  sum(1 for c in checks if c["verdict"] == "WARN"),
+        },
+    }
 
 
 if __name__ == "__main__":
