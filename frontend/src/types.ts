@@ -61,7 +61,7 @@ export interface EvidenceCard {
 export interface CustomerLead {
   id: string;
   title: string;
-  source: 'reddit' | 'facebook_group' | 'nextdoor' | 'google' | 'local_search' | 'quora';
+  source: 'reddit' | 'facebook_group' | 'nextdoor' | 'google' | 'local_search' | 'quora' | 'etsy';
   source_url: string;
   intent_signal: string;
   location_hint?: string | null;

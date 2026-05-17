@@ -6,8 +6,9 @@ const SOURCE_BADGE: Record<CustomerLead['source'], { label: string; bg: string; 
   facebook_group: { label: 'FB Group',     bg: 'bg-blue-100',    text: 'text-blue-800' },
   nextdoor:       { label: 'Nextdoor',     bg: 'bg-emerald-100', text: 'text-emerald-800' },
   google:         { label: 'Search',       bg: 'bg-amber-100',   text: 'text-amber-900' },
-  local_search:   { label: 'Local Search', bg: 'bg-teal-100',    text: 'text-teal-800' },
+  local_search:   { label: 'Forum',        bg: 'bg-teal-100',    text: 'text-teal-800' },
   quora:          { label: 'Quora',        bg: 'bg-red-100',     text: 'text-red-800' },
+  etsy:           { label: 'Etsy',         bg: 'bg-orange-100',  text: 'text-orange-800' },
 };
 
 export default function CustomerLeadCard({ lead }: { lead: CustomerLead }) {
